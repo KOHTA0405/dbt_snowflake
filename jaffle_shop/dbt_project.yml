@@ -31,3 +31,7 @@ models:
   jaffle_shop:
     stg:
       +materialized: view
+      +schema: BRONZE
+    dwh:
+      +materialized: table
+      +schema: SILVER

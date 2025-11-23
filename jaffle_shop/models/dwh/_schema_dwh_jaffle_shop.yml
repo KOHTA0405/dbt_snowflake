@@ -1,0 +1,544 @@
+version: 2
+
+models:
+  - name: int_product_supply_costs
+    description: >
+      Intermediate model that calculates the total supply cost per product using the latest supply costs.
+      This aggregates all supply items needed to produce each product.
+    meta:
+      group_label: DWH Jaffle Shop
+    columns:
+      - name: product_id
+        description: The unique key for each product.
+        meta:
+          dimension:
+            type: string
+            label: Product ID
+      - name: total_supply_cost
+        description: The total cost of all supplies needed to produce one unit of this product, using the latest supply costs.
+        meta:
+          dimension:
+            type: number
+            label: Total Supply Cost
+          metrics:
+            total_supply_cost_sum:
+              type: sum
+              label: Total Supply Cost (Sum)
+            avg_supply_cost:
+              type: average
+              label: Average Supply Cost
+
+  - name: dim_customers
+    description: Customer dimension table, one row per customer.
+    meta:
+      group_label: DWH Jaffle Shop
+    columns:
+      - name: customer_sk
+        description: Surrogate key for customer dimension.
+        tests:
+          - unique
+          - not_null
+        meta:
+          dimension:
+            type: string
+            label: Customer SK
+      - name: customer_id
+        description: The unique key for each customer.
+        meta:
+          dimension:
+            type: string
+            label: Customer ID
+      - name: customer_name
+        description: The name of the customer.
+        meta:
+          dimension:
+            type: string
+            label: Customer Name
+
+  - name: dim_locations
+    description: Location dimension table, one row per location/store.
+    meta:
+      group_label: DWH Jaffle Shop
+    columns:
+      - name: location_sk
+        description: Surrogate key for location dimension.
+        tests:
+          - unique
+          - not_null
+        meta:
+          dimension:
+            type: string
+            label: Location SK
+      - name: location_id
+        description: The unique key for each location.
+        meta:
+          dimension:
+            type: string
+            label: Location ID
+      - name: location_name
+        description: The name of the location.
+        meta:
+          dimension:
+            type: string
+            label: Location Name
+      - name: tax_rate
+        description: The tax rate for the location.
+        meta:
+          dimension:
+            type: number
+            label: Tax Rate
+          metrics:
+            avg_tax_rate:
+              type: average
+              label: Average Tax Rate
+      - name: opened_date
+        description: The date the location was opened.
+        meta:
+          dimension:
+            type: date
+            label: Opened Date
+            time_intervals: ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"]
+
+  - name: dim_products
+    description: Product dimension table with supply cost and profit metrics, one row per product.
+    meta:
+      group_label: DWH Jaffle Shop
+    columns:
+      - name: product_sk
+        description: Surrogate key for product dimension.
+        tests:
+          - unique
+          - not_null
+        meta:
+          dimension:
+            type: string
+            label: Product SK
+      - name: product_id
+        description: The unique key for each product.
+        meta:
+          dimension:
+            type: string
+            label: Product ID
+      - name: product_name
+        description: The name of the product.
+        meta:
+          dimension:
+            type: string
+            label: Product Name
+      - name: product_type
+        description: The type of product (e.g., jaffle, beverage).
+        meta:
+          dimension:
+            type: string
+            label: Product Type
+      - name: product_description
+        description: Description of the product.
+        meta:
+          dimension:
+            type: string
+            label: Product Description
+      - name: product_price
+        description: The selling price of the product.
+        meta:
+          dimension:
+            type: number
+            label: Product Price
+          metrics:
+            total_product_price:
+              type: sum
+              label: Total Product Price (Sum)
+            avg_product_price:
+              type: average
+              label: Average Product Price
+      - name: is_food_item
+        description: Boolean indicating if the product is a food item.
+        meta:
+          dimension:
+            type: boolean
+            label: Is Food Item
+      - name: is_drink_item
+        description: Boolean indicating if the product is a drink item.
+        meta:
+          dimension:
+            type: boolean
+            label: Is Drink Item
+      - name: supply_cost
+        description: The total supply cost to produce one unit of this product.
+        meta:
+          dimension:
+            type: number
+            label: Supply Cost
+          metrics:
+            total_supply_cost:
+              type: sum
+              label: Total Supply Cost (Sum)
+            avg_supply_cost:
+              type: average
+              label: Average Supply Cost
+      - name: profit_per_unit
+        description: The profit per unit (product_price - supply_cost).
+        meta:
+          dimension:
+            type: number
+            label: Profit Per Unit
+          metrics:
+            total_profit_per_unit:
+              type: sum
+              label: Total Profit Per Unit (Sum)
+            avg_profit_per_unit:
+              type: average
+              label: Average Profit Per Unit
+      - name: profit_margin_percent
+        description: The profit margin percentage ((profit_per_unit / product_price) * 100).
+        meta:
+          dimension:
+            type: number
+            label: Profit Margin (%)
+          metrics:
+            avg_profit_margin:
+              type: average
+              label: Average Profit Margin (%)
+
+  - name: fct_order_items
+    description: >
+      Fact table at the order item level, containing revenue, supply cost, and profit metrics for each item in an order.
+      One row per order item.
+    meta:
+      group_label: DWH Jaffle Shop
+    columns:
+      - name: customer_sk
+        description: Foreign key to dim_customers.
+        tests:
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_sk
+        meta:
+          dimension:
+            type: string
+            label: Customer SK
+          relationships:
+            - to: ref('dim_customers')
+              field: customer_sk
+      - name: location_sk
+        description: Foreign key to dim_locations.
+        tests:
+          - relationships:
+              to: ref('dim_locations')
+              field: location_sk
+        meta:
+          dimension:
+            type: string
+            label: Location SK
+          relationships:
+            - to: ref('dim_locations')
+              field: location_sk
+      - name: product_sk
+        description: Foreign key to dim_products.
+        tests:
+          - relationships:
+              to: ref('dim_products')
+              field: product_sk
+        meta:
+          dimension:
+            type: string
+            label: Product SK
+          relationships:
+            - to: ref('dim_products')
+              field: product_sk
+      - name: order_item_id
+        description: The unique key for each order item.
+        meta:
+          dimension:
+            type: string
+            label: Order Item ID
+      - name: order_id
+        description: The order this item belongs to.
+        meta:
+          dimension:
+            type: string
+            label: Order ID
+      - name: product_id
+        description: The product that was ordered.
+        meta:
+          dimension:
+            type: string
+            label: Product ID
+      - name: customer_id
+        description: The customer who placed the order.
+        meta:
+          dimension:
+            type: string
+            label: Customer ID
+      - name: location_id
+        description: The location where the order was placed.
+        meta:
+          dimension:
+            type: string
+            label: Location ID
+      - name: order_date
+        description: The date the order was placed.
+        meta:
+          dimension:
+            type: date
+            label: Order Date
+            time_intervals: ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"]
+      - name: product_name
+        description: The name of the product.
+        meta:
+          dimension:
+            type: string
+            label: Product Name
+      - name: product_type
+        description: The type of product.
+        meta:
+          dimension:
+            type: string
+            label: Product Type
+      - name: unit_price
+        description: The selling price per unit of the product.
+        meta:
+          dimension:
+            type: number
+            label: Unit Price
+          metrics:
+            total_unit_price:
+              type: sum
+              label: Total Unit Price (Sum)
+            avg_unit_price:
+              type: average
+              label: Average Unit Price
+      - name: unit_supply_cost
+        description: The supply cost per unit of the product.
+        meta:
+          dimension:
+            type: number
+            label: Unit Supply Cost
+          metrics:
+            total_unit_supply_cost:
+              type: sum
+              label: Total Unit Supply Cost (Sum)
+            avg_unit_supply_cost:
+              type: average
+              label: Average Unit Supply Cost
+      - name: revenue_per_item
+        description: The revenue generated by this order item (same as unit_price).
+        meta:
+          dimension:
+            type: number
+            label: Revenue Per Item
+          metrics:
+            total_revenue:
+              type: sum
+              label: Total Revenue
+            avg_revenue_per_item:
+              type: average
+              label: Average Revenue Per Item
+      - name: cost_per_item
+        description: The supply cost for this order item (same as unit_supply_cost).
+        meta:
+          dimension:
+            type: number
+            label: Cost Per Item
+          metrics:
+            total_cost:
+              type: sum
+              label: Total Cost
+            avg_cost_per_item:
+              type: average
+              label: Average Cost Per Item
+      - name: profit_per_item
+        description: The profit for this order item (revenue_per_item - cost_per_item).
+        meta:
+          dimension:
+            type: number
+            label: Profit Per Item
+          metrics:
+            total_profit:
+              type: sum
+              label: Total Profit
+            avg_profit_per_item:
+              type: average
+              label: Average Profit Per Item
+      - name: profit_margin_percent
+        description: The profit margin percentage for this order item.
+        meta:
+          dimension:
+            type: number
+            label: Profit Margin (%)
+          metrics:
+            avg_profit_margin:
+              type: average
+              label: Average Profit Margin (%)
+
+  - name: fct_orders
+    description: >
+      Fact table at the order level, aggregating revenue, supply costs, and profit metrics for each order.
+      One row per order.
+    meta:
+      group_label: DWH Jaffle Shop
+    columns:
+      - name: customer_sk
+        description: Foreign key to dim_customers.
+        tests:
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_sk
+        meta:
+          dimension:
+            type: string
+            label: Customer SK
+          relationships:
+            - to: ref('dim_customers')
+              field: customer_sk
+      - name: location_sk
+        description: Foreign key to dim_locations.
+        tests:
+          - relationships:
+              to: ref('dim_locations')
+              field: location_sk
+        meta:
+          dimension:
+            type: string
+            label: Location SK
+          relationships:
+            - to: ref('dim_locations')
+              field: location_sk
+      - name: order_id
+        description: The unique key for each order.
+        meta:
+          dimension:
+            type: string
+            label: Order ID
+      - name: customer_id
+        description: The customer who placed the order.
+        meta:
+          dimension:
+            type: string
+            label: Customer ID
+      - name: location_id
+        description: The location where the order was placed.
+        meta:
+          dimension:
+            type: string
+            label: Location ID
+      - name: order_date
+        description: The date the order was placed.
+        meta:
+          dimension:
+            type: date
+            label: Order Date
+            time_intervals: ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"]
+      - name: order_total_revenue
+        description: The total revenue for the order from the orders table.
+        meta:
+          dimension:
+            type: number
+            label: Order Total Revenue
+          metrics:
+            total_revenue:
+              type: sum
+              label: Total Revenue
+            avg_order_revenue:
+              type: average
+              label: Average Order Revenue
+      - name: order_subtotal
+        description: The subtotal for the order (before tax).
+        meta:
+          dimension:
+            type: number
+            label: Order Subtotal
+          metrics:
+            total_subtotal:
+              type: sum
+              label: Total Subtotal
+            avg_subtotal:
+              type: average
+              label: Average Subtotal
+      - name: order_tax
+        description: The tax amount for the order.
+        meta:
+          dimension:
+            type: number
+            label: Order Tax
+          metrics:
+            total_tax:
+              type: sum
+              label: Total Tax
+            avg_tax:
+              type: average
+              label: Average Tax
+      - name: item_count
+        description: The number of items in the order.
+        meta:
+          dimension:
+            type: number
+            label: Item Count
+          metrics:
+            total_items:
+              type: sum
+              label: Total Items
+            avg_items_per_order:
+              type: average
+              label: Average Items Per Order
+            total_orders:
+              type: count
+              label: Total Orders
+      - name: calculated_revenue
+        description: The calculated revenue from summing order items (should match order_total_revenue).
+        meta:
+          dimension:
+            type: number
+            label: Calculated Revenue
+          metrics:
+            total_calculated_revenue:
+              type: sum
+              label: Total Calculated Revenue
+            avg_calculated_revenue:
+              type: average
+              label: Average Calculated Revenue
+      - name: total_supply_cost
+        description: The total supply cost for all items in the order.
+        meta:
+          dimension:
+            type: number
+            label: Total Supply Cost
+          metrics:
+            total_supply_cost_sum:
+              type: sum
+              label: Total Supply Cost (Sum)
+            avg_supply_cost:
+              type: average
+              label: Average Supply Cost
+      - name: total_profit
+        description: The total profit for the order (calculated_revenue - total_supply_cost).
+        meta:
+          dimension:
+            type: number
+            label: Total Profit
+          metrics:
+            total_profit_sum:
+              type: sum
+              label: Total Profit (Sum)
+            avg_profit:
+              type: average
+              label: Average Profit
+      - name: profit_margin_percent
+        description: The profit margin percentage for the order ((total_profit / calculated_revenue) * 100).
+        meta:
+          dimension:
+            type: number
+            label: Profit Margin (%)
+          metrics:
+            avg_profit_margin:
+              type: average
+              label: Average Profit Margin (%)
+      - name: avg_item_profit_margin_percent
+        description: The average profit margin percentage across all items in the order.
+        meta:
+          dimension:
+            type: number
+            label: Average Item Profit Margin (%)
+          metrics:
+            avg_item_profit_margin:
+              type: average
+              label: Average Item Profit Margin (%)
