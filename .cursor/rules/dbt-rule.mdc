@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+# ベストプラクティス
+- dbtのベストプラクティスとして、以下のページを参照してから開発を進めるようにして。
+  - https://docs.getdbt.com/best-practices
