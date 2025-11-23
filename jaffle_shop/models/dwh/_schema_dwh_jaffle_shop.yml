@@ -205,6 +205,20 @@ models:
       One row per order item.
     meta:
       group_label: DWH Jaffle Shop
+      primary_key: order_item_id
+      joins:
+        - join: dim_customers
+          type: left
+          sql_on: ${fct_order_items.customer_sk} = ${dim_customers.customer_sk}
+          relationship: many-to-one
+        - join: dim_locations
+          type: left
+          sql_on: ${fct_order_items.location_sk} = ${dim_locations.location_sk}
+          relationship: many-to-one
+        - join: dim_products
+          type: left
+          sql_on: ${fct_order_items.product_sk} = ${dim_products.product_sk}
+          relationship: many-to-one
     columns:
       - name: customer_sk
         description: Foreign key to dim_customers.
@@ -376,6 +390,20 @@ models:
       One row per order.
     meta:
       group_label: DWH Jaffle Shop
+      primary_key: order_id
+      joins:
+        - join: dim_customers
+          type: left
+          sql_on: ${fct_orders.customer_sk} = ${dim_customers.customer_sk}
+          relationship: many-to-one
+        - join: dim_locations
+          type: left
+          sql_on: ${fct_orders.location_sk} = ${dim_locations.location_sk}
+          relationship: many-to-one
+        - join: fct_order_items
+          type: left
+          sql_on: ${fct_orders.order_id} = ${fct_order_items.order_id}
+          relationship: one-to-many
     columns:
       - name: customer_sk
         description: Foreign key to dim_customers.
