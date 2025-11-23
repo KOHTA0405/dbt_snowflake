@@ -1,0 +1,120 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: Customer data with basic cleaning and transformation applied, one row per customer.
+    meta:
+      group_label: Stg Jaffle Shop
+    columns:
+      - name: customer_id
+        description: The unique key for each customer.
+        # data_tests:
+        #   - not_null
+        #   - unique
+      - name: customer_name
+        description: The name of the customer.
+
+  - name: stg_locations
+    description: List of open locations with basic cleaning and transformation applied, one row per location.
+    meta:
+      group_label: Stg Jaffle Shop
+    columns:
+      - name: location_id
+        description: The unique key for each location.
+        # data_tests:
+        #   - not_null
+        #   - unique
+      - name: location_name
+        description: The name of the location.
+      - name: tax_rate
+        description: The tax rate for the location.
+      - name: opened_date
+        description: The date the location was opened.
+
+  - name: stg_order_items
+    meta:
+      group_label: Stg Jaffle Shop
+    description: Individual food and drink items that make up our orders, one row per item.
+    columns:
+      - name: order_item_id
+        description: The unique key for each order item.
+        # data_tests:
+        #   - not_null
+        #   - unique
+      - name: order_id
+        description: The corresponding order each order item belongs to
+        # data_tests:
+        #   - not_null
+        #   - relationships:
+        #       to: ref('stg_orders')
+        #       field: order_id
+      - name: product_id
+        description: The product that was ordered.
+
+  - name: stg_orders
+    description: Order data with basic cleaning and transformation applied, one row per order.
+    # data_tests:
+    #   - dbt_utils.expression_is_true:
+    #       expression: "order_total - tax_paid = subtotal"
+    meta:
+      group_label: Stg Jaffle Shop
+    columns:
+      - name: order_id
+        # description: The unique key for each order.
+        # data_tests:
+        #   - not_null
+        #   - unique
+        meta:
+          metrics:
+            total_order_count:
+              type: count_distinct
+      - name: location_id
+      - name: customer_id
+      - name: subtotal_cents
+      - name: tax_paid_cents
+      - name: order_total_cents
+      - name: subtotal
+        meta:
+          metrics:
+            total_sales:
+              type: sum
+              format: '$#,##0.00," K"'
+      - name: tax_paid
+      - name: order_total
+      - name: ordered_at
+
+  - name: stg_products
+    description: Product (food and drink items that can be ordered) data with basic cleaning and transformation applied, one row per product.
+    meta:
+      group_label: Stg Jaffle Shop
+    columns:
+      - name: product_id
+        description: The unique key for each product.
+        # data_tests:
+        #   - not_null
+        #   - unique
+      - name: product_name
+      - name: product_type
+      - name: product_descr
+      - name: product_price
+      - name: is_food_item
+      - name: is_drink_item
+
+  - name: stg_supplies
+    description: >
+      List of our supply expenses data with basic cleaning and transformation applied.
+
+      One row per supply cost, not per supply. As supply costs fluctuate they receive a new row with a new UUID. Thus there can be multiple rows per supply_id.
+    meta:
+      group_label: Stg Jaffle Shop
+    columns:
+      - name: supply_uuid
+        description: The unique key of our supplies per cost.
+        # data_tests:
+        #   - not_null
+        #   - unique
+      - name: supply_id
+      - name: product_id
+      - name: supply_name
+      - name: supply_cost
+      - name: is_perishable_supply
