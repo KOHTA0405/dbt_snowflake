@@ -1,0 +1,13 @@
+jaffle_shop:
+  outputs:
+    dev:
+      account: SZEBENZ-OS44603
+      user: DBT_DEV_USER
+      role: ADMINISTRATOR_DEV # Snowflakeでは引用符なしの識別子は大文字に変換されるため、大文字で指定
+      private_key_path: /Users/kohta/.ssh/snowflake/dbt_dev_user_key
+      database: DEV
+      schema: BRONZE
+      threads: 1
+      type: snowflake
+      warehouse: DBT_DEV_WH
+  target: dev
