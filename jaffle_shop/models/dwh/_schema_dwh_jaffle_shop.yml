@@ -207,10 +207,10 @@ models:
       group_label: DWH Jaffle Shop
       primary_key: order_item_id
       joins:
-        - join: dim_customers
-          type: left
-          sql_on: ${fct_order_items.customer_sk} = ${dim_customers.customer_sk}
-          relationship: many-to-one
+        # - join: dim_customers
+        #   type: left
+        #   sql_on: ${fct_order_items.customer_sk} = ${dim_customers.customer_sk}
+        #   relationship: many-to-one
         - join: dim_locations
           type: left
           sql_on: ${fct_order_items.location_sk} = ${dim_locations.location_sk}
