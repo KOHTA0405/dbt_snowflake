@@ -1,0 +1,79 @@
+-- ============================================
+-- DROP statements for dbt_snowflake_monitoring models
+-- that were created in BRONZE and SILVER schemas
+-- ============================================
+-- 
+-- This script drops all dbt_snowflake_monitoring models
+-- that were previously created in BRONZE and SILVER schemas.
+-- These models should now be in DBT_SNOWFLAKE_MONITORING schema.
+--
+-- Usage: Execute this script in Snowflake after confirming
+-- that the models have been recreated in DBT_SNOWFLAKE_MONITORING schema.
+-- ============================================
+
+-- ============================================
+-- BRONZE Schema (staging models)
+-- ============================================
+
+-- Incremental models (tables)
+DROP TABLE IF EXISTS DEV.BRONZE.STG_ACCESS_HISTORY;
+DROP TABLE IF EXISTS DEV.BRONZE.STG_QUERY_HISTORY;
+DROP TABLE IF EXISTS DEV.BRONZE.STG_SERVERLESS_TASK_HISTORY;
+DROP TABLE IF EXISTS DEV.BRONZE.STG_WAREHOUSE_METERING_HISTORY;
+
+-- Table models
+DROP TABLE IF EXISTS DEV.BRONZE.STG_METERING_HISTORY;
+DROP TABLE IF EXISTS DEV.BRONZE.STG_RATE_SHEET_DAILY;
+DROP TABLE IF EXISTS DEV.BRONZE.STG_REMAINING_BALANCE_DAILY;
+
+-- View models
+DROP VIEW IF EXISTS DEV.BRONZE.STG_DATABASE_STORAGE_USAGE_HISTORY;
+DROP VIEW IF EXISTS DEV.BRONZE.STG_METERING_DAILY_HISTORY;
+DROP VIEW IF EXISTS DEV.BRONZE.STG_STAGE_STORAGE_USAGE_HISTORY;
+DROP VIEW IF EXISTS DEV.BRONZE.STG_STORAGE_USAGE;
+
+-- ============================================
+-- SILVER Schema (main models)
+-- ============================================
+
+-- Incremental models (tables)
+DROP TABLE IF EXISTS DEV.SILVER.COST_PER_QUERY;
+DROP TABLE IF EXISTS DEV.SILVER.DBT_QUERIES;
+DROP TABLE IF EXISTS DEV.SILVER.QUERY_BASE_OBJECT_ACCESS;
+DROP TABLE IF EXISTS DEV.SILVER.QUERY_DIRECT_OBJECT_ACCESS;
+DROP TABLE IF EXISTS DEV.SILVER.QUERY_HISTORY_ENRICHED;
+
+-- Table models
+DROP TABLE IF EXISTS DEV.SILVER.DAILY_RATES;
+DROP TABLE IF EXISTS DEV.SILVER.HOURLY_SPEND;
+DROP TABLE IF EXISTS DEV.SILVER.WAREHOUSES_TYPE2_DIMENSION;
+
+-- View models
+DROP VIEW IF EXISTS DEV.SILVER.DAILY_SPEND;
+DROP VIEW IF EXISTS DEV.SILVER.QUERY_BASE_TABLE_ACCESS;
+DROP VIEW IF EXISTS DEV.SILVER.QUERY_DIRECT_TABLE_ACCESS;
+DROP VIEW IF EXISTS DEV.SILVER.REMAINING_BALANCE_DAILY_WITHOUT_CONTRACT_VIEW;
+DROP VIEW IF EXISTS DEV.SILVER.WAREHOUSE_CREDITS_MAP;
+
+-- ============================================
+-- Verification queries (optional)
+-- ============================================
+-- Uncomment the following to verify objects have been dropped:
+--
+-- SELECT 'BRONZE' AS SCHEMA, TABLE_NAME, TABLE_TYPE
+-- FROM DEV.INFORMATION_SCHEMA.TABLES
+-- WHERE TABLE_SCHEMA = 'BRONZE'
+--   AND TABLE_NAME LIKE 'STG_%'
+-- ORDER BY TABLE_NAME;
+--
+-- SELECT 'SILVER' AS SCHEMA, TABLE_NAME, TABLE_TYPE
+-- FROM DEV.INFORMATION_SCHEMA.TABLES
+-- WHERE TABLE_SCHEMA = 'SILVER'
+--   AND (TABLE_NAME LIKE 'DAILY_%'
+--     OR TABLE_NAME LIKE 'HOURLY_%'
+--     OR TABLE_NAME LIKE 'QUERY_%'
+--     OR TABLE_NAME LIKE 'COST_%'
+--     OR TABLE_NAME LIKE 'DBT_%'
+--     OR TABLE_NAME LIKE 'WAREHOUSE_%'
+--     OR TABLE_NAME LIKE 'REMAINING_%')
+-- ORDER BY TABLE_NAME;

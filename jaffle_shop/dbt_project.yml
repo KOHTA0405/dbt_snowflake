@@ -35,7 +35,8 @@ models:
     dwh:
       +materialized: table
       +schema: SILVER
+    gold:
+      +materialized: view
+      +schema: GOLD
   dbt_snowflake_monitoring:
-    staging:
-      +schema: BRONZE
-    +schema: SILVER
+    +schema: DBT_SNOWFLAKE_MONITORING

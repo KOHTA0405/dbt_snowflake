@@ -22,3 +22,20 @@ sources:
         description: One record per SKU for items sold in stores
       - name: raw_supplies
         description: One record per supply per SKU of items sold in stores
+
+  - name: dbt_snowflake_monitoring
+    schema: DBT_SNOWFLAKE_MONITORING
+    description: Snowflake monitoring data from dbt_snowflake_monitoring package
+    tables:
+      - name: daily_spend
+        description: Table of daily spend broken down by services as listed on the invoice, with additional granularity
+      - name: dbt_queries
+        description: dbt queries from query_history_enriched filtered to only dbt queries
+      - name: query_base_table_access
+        description: Table access information filtered to only tables (excludes secured views)
+      - name: query_direct_table_access
+        description: Direct table access information filtered to only tables (excludes secured views)
+      - name: warehouse_credits_map
+        description: Mapping of warehouse sizes and types to credits per hour/minute/second
+      - name: warehouses_type2_dimension
+        description: Type 2 dimension table for warehouse snapshots with valid_from and valid_to timestamps
