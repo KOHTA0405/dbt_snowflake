@@ -5,7 +5,10 @@ packages:
   - name: dbt_snowflake_monitoring
     package: get-select/dbt_snowflake_monitoring
     version: 5.5.0
+  - name: dbt_semantic_view
+    package: Snowflake-Labs/dbt_semantic_view
+    version: 1.0.3
   - name: dbt_snowflake_query_tags
     package: get-select/dbt_snowflake_query_tags
     version: 2.6.0
-sha1_hash: 5b5ca06e9bb468eefcd6a2414b42ed05dd1c7c76
+sha1_hash: f794c3d478c3b53087afb33ebc6e1db11d37dfb9
