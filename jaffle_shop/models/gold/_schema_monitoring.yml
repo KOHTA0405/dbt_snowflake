@@ -3,380 +3,431 @@ version: 2
 models:
   - name: monitoring_daily_spend
     description: Table of daily spend broken down by services as listed on the invoice, with additional granularity. Source from dbt_snowflake_monitoring package.
-    meta:
-      group_label: Monitoring
+    config:
+      meta:
+        group_label: Monitoring
     columns:
       - name: date
         description: Date of spend in UTC timezone to match with Snowflake's billing timezone.
-        meta:
-          dimension:
-            type: date
-            label: Date
-            time_intervals: ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"]
+        config:
+          meta:
+            dimension:
+              type: date
+              label: Date
+              time_intervals: ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"]
       - name: service
         description: Top level spend category per Snowflake invoice.
-        meta:
-          dimension:
-            type: string
-            label: Service
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Service
       - name: storage_type
         description: Subcategories where service = "Storage".
-        meta:
-          dimension:
-            type: string
-            label: Storage Type
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Storage Type
       - name: warehouse_name
         description: Subcategories where service = "Compute" or "Cloud Services".
-        meta:
-          dimension:
-            type: string
-            label: Warehouse Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Warehouse Name
       - name: database_name
         description: Subcategories where service = "Serverless Tasks" or service = "Storage" and storage_type = "Table and Time Travel" or "Failsafe".
-        meta:
-          dimension:
-            type: string
-            label: Database Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Database Name
       - name: usage
         description: Usage of the service in the units described by the 'usage_unit' column (i.e. TB, Credits, etc.).
-        meta:
-          dimension:
-            type: number
-            label: Usage
-          metrics:
-            total_usage:
-              type: sum
-              label: Total Usage
-            avg_usage:
-              type: average
-              label: Average Usage
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Usage
+            metrics:
+              total_usage:
+                type: sum
+                label: Total Usage
+              avg_usage:
+                type: average
+                label: Average Usage
       - name: usage_net_cloud_services
         description: Usage with cloud service adjustments taken into account.
-        meta:
-          dimension:
-            type: number
-            label: Usage Net Cloud Services
-          metrics:
-            total_usage_net_cloud_services:
-              type: sum
-              label: Total Usage Net Cloud Services
-            avg_usage_net_cloud_services:
-              type: average
-              label: Average Usage Net Cloud Services
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Usage Net Cloud Services
+            metrics:
+              total_usage_net_cloud_services:
+                type: sum
+                label: Total Usage Net Cloud Services
+              avg_usage_net_cloud_services:
+                type: average
+                label: Average Usage Net Cloud Services
       - name: spend
         description: Spend in the currency described by the 'currency' column
-        meta:
-          dimension:
-            type: number
-            label: Spend
-          metrics:
-            total_spend:
-              type: sum
-              label: Total Spend
-            avg_spend:
-              type: average
-              label: Average Spend
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Spend
+            metrics:
+              total_spend:
+                type: sum
+                label: Total Spend
+              avg_spend:
+                type: average
+                label: Average Spend
       - name: spend_net_cloud_services
         description: Spend with cloud service adjustments taken into account.
-        meta:
-          dimension:
-            type: number
-            label: Spend Net Cloud Services
-          metrics:
-            total_spend_net_cloud_services:
-              type: sum
-              label: Total Spend Net Cloud Services
-            avg_spend_net_cloud_services:
-              type: average
-              label: Average Spend Net Cloud Services
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Spend Net Cloud Services
+            metrics:
+              total_spend_net_cloud_services:
+                type: sum
+                label: Total Spend Net Cloud Services
+              avg_spend_net_cloud_services:
+                type: average
+                label: Average Spend Net Cloud Services
       - name: currency
         description: Spend currency, retrieved from Snowflake's daily rate sheet
-        meta:
-          dimension:
-            type: string
-            label: Currency
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Currency
       - name: usage_unit
         description: The units of the usage column (i.e. TB, Credits, etc.).
-        meta:
-          dimension:
-            type: string
-            label: Usage Unit
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Usage Unit
       - name: usage_rate
         description: Usage rate, retrieved from the rate sheet, in units per currency.
-        meta:
-          dimension:
-            type: number
-            label: Usage Rate
-          metrics:
-            avg_usage_rate:
-              type: average
-              label: Average Usage Rate
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Usage Rate
+            metrics:
+              avg_usage_rate:
+                type: average
+                label: Average Usage Rate
 
   - name: monitoring_dbt_queries
     description: dbt queries from query_history_enriched filtered to only dbt queries. Source from dbt_snowflake_monitoring package.
-    meta:
-      group_label: Monitoring
+    config:
+      meta:
+        group_label: Monitoring
     columns:
       - name: dbt_node_name
         description: The name of the node that the query relates to.
-        meta:
-          dimension:
-            type: string
-            label: dbt Node Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: dbt Node Name
       - name: dbt_node_resource_type
         description: The resource type of the node that the query relates to.
-        meta:
-          dimension:
-            type: string
-            label: dbt Resource Type
+        config:
+          meta:
+            dimension:
+              type: string
+              label: dbt Resource Type
       - name: dbt_node_materialized
         description: The materialization of the node that the query relates to.
-        meta:
-          dimension:
-            type: string
-            label: dbt Materialized
+        config:
+          meta:
+            dimension:
+              type: string
+              label: dbt Materialized
       - name: dbt_project_name
         description: Name of the dbt project.
-        meta:
-          dimension:
-            type: string
-            label: dbt Project Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: dbt Project Name
       - name: start_time
         description: The statement start time (UTC time zone).
-        meta:
-          dimension:
-            type: timestamp
-            label: Start Time
-            time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
+        config:
+          meta:
+            dimension:
+              type: timestamp
+              label: Start Time
+              time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
       - name: end_time
         description: The statement end time (UTC time zone).
-        meta:
-          dimension:
-            type: timestamp
-            label: End Time
-            time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
+        config:
+          meta:
+            dimension:
+              type: timestamp
+              label: End Time
+              time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
       - name: warehouse_name
         description: The name of the warehouse that executed the query.
-        meta:
-          dimension:
-            type: string
-            label: Warehouse Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Warehouse Name
       - name: user_name
         description: The user who issued the query.
-        meta:
-          dimension:
-            type: string
-            label: User Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: User Name
       - name: total_elapsed_time
         description: Total elapsed time for the query in milliseconds.
-        meta:
-          dimension:
-            type: number
-            label: Total Elapsed Time (ms)
-          metrics:
-            total_elapsed_time_sum:
-              type: sum
-              label: Total Elapsed Time (Sum)
-            avg_elapsed_time:
-              type: average
-              label: Average Elapsed Time
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Total Elapsed Time (ms)
+            metrics:
+              total_elapsed_time_sum:
+                type: sum
+                label: Total Elapsed Time (Sum)
+              avg_elapsed_time:
+                type: average
+                label: Average Elapsed Time
       - name: bytes_scanned
         description: Number of bytes scanned by the query.
-        meta:
-          dimension:
-            type: number
-            label: Bytes Scanned
-          metrics:
-            total_bytes_scanned:
-              type: sum
-              label: Total Bytes Scanned
-            avg_bytes_scanned:
-              type: average
-              label: Average Bytes Scanned
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Bytes Scanned
+            metrics:
+              total_bytes_scanned:
+                type: sum
+                label: Total Bytes Scanned
+              avg_bytes_scanned:
+                type: average
+                label: Average Bytes Scanned
       - name: credits_used_cloud_services
         description: Credits used for cloud services.
-        meta:
-          dimension:
-            type: number
-            label: Credits Used Cloud Services
-          metrics:
-            total_credits_used_cloud_services:
-              type: sum
-              label: Total Credits Used Cloud Services
-            avg_credits_used_cloud_services:
-              type: average
-              label: Average Credits Used Cloud Services
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Credits Used Cloud Services
+            metrics:
+              total_credits_used_cloud_services:
+                type: sum
+                label: Total Credits Used Cloud Services
+              avg_credits_used_cloud_services:
+                type: average
+                label: Average Credits Used Cloud Services
       - name: query_id
         description: An internal, system-generated identifier for the SQL statement.
-        meta:
-          dimension:
-            type: string
-            label: Query ID
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Query ID
 
   - name: monitoring_query_base_table_access
     description: Table access information filtered to only tables (excludes secured views). Source from dbt_snowflake_monitoring package.
-    meta:
-      group_label: Monitoring
+    config:
+      meta:
+        group_label: Monitoring
     columns:
       - name: query_start_time
         description: The statement start time (UTC time zone).
-        meta:
-          dimension:
-            type: timestamp
-            label: Query Start Time
-            time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
+        config:
+          meta:
+            dimension:
+              type: timestamp
+              label: Query Start Time
+              time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
       - name: user_name
         description: The user who issued the query.
-        meta:
-          dimension:
-            type: string
-            label: User Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: User Name
       - name: full_table_name
         description: Fully qualified table name, i.e. <database_name>.<schema_name>.<table_name>
-        meta:
-          dimension:
-            type: string
-            label: Full Table Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Full Table Name
       - name: query_id
         description: An internal, system-generated identifier for the SQL statement.
-        meta:
-          dimension:
-            type: string
-            label: Query ID
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Query ID
       - name: _unique_id
         description: Unique identifier for each row in the table
-        meta:
-          metrics:
-            count_unique_id:
-              type: count_distinct
-              label: Count of Table Accesses
+        config:
+          meta:
+            metrics:
+              count_unique_id:
+                type: count_distinct
+                label: Count of Table Accesses
 
   - name: monitoring_query_direct_table_access
     description: Direct table access information filtered to only tables (excludes secured views). Source from dbt_snowflake_monitoring package.
-    meta:
-      group_label: Monitoring
+    config:
+      meta:
+        group_label: Monitoring
     columns:
       - name: query_start_time
         description: The statement start time (UTC time zone).
-        meta:
-          dimension:
-            type: timestamp
-            label: Query Start Time
-            time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
+        config:
+          meta:
+            dimension:
+              type: timestamp
+              label: Query Start Time
+              time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
       - name: user_name
         description: The user who issued the query.
-        meta:
-          dimension:
-            type: string
-            label: User Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: User Name
       - name: full_table_name
         description: Fully qualified table name, i.e. <database_name>.<schema_name>.<table_name>
-        meta:
-          dimension:
-            type: string
-            label: Full Table Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Full Table Name
       - name: query_id
         description: An internal, system-generated identifier for the SQL statement.
-        meta:
-          dimension:
-            type: string
-            label: Query ID
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Query ID
       - name: _unique_id
         description: Unique identifier for each row in the table
-        meta:
-          metrics:
-            count_unique_id:
-              type: count_distinct
-              label: Count of Direct Table Accesses
+        config:
+          meta:
+            metrics:
+              count_unique_id:
+                type: count_distinct
+                label: Count of Direct Table Accesses
 
   - name: monitoring_warehouse_credits_map
     description: Mapping of warehouse sizes and types to credits per hour/minute/second. Source from dbt_snowflake_monitoring package.
-    meta:
-      group_label: Monitoring
+    config:
+      meta:
+        group_label: Monitoring
     columns:
       - name: warehouse_size
         description: The size of the warehouse.
-        meta:
-          dimension:
-            type: string
-            label: Warehouse Size
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Warehouse Size
       - name: warehouse_type
         description: The type of the warehouse. Will be STANDARD or SNOWPARK-OPTIMIZED.
-        meta:
-          dimension:
-            type: string
-            label: Warehouse Type
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Warehouse Type
       - name: credits_per_hour
         description: The hourly rate at which credits are charged for this warehouse configuration
-        meta:
-          dimension:
-            type: number
-            label: Credits Per Hour
-          metrics:
-            avg_credits_per_hour:
-              type: average
-              label: Average Credits Per Hour
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Credits Per Hour
+            metrics:
+              avg_credits_per_hour:
+                type: average
+                label: Average Credits Per Hour
       - name: credits_per_minute
         description: The minutely rate at which credits are charged for this warehouse configuration
-        meta:
-          dimension:
-            type: number
-            label: Credits Per Minute
-          metrics:
-            avg_credits_per_minute:
-              type: average
-              label: Average Credits Per Minute
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Credits Per Minute
+            metrics:
+              avg_credits_per_minute:
+                type: average
+                label: Average Credits Per Minute
       - name: credits_per_second
         description: The secondly rate at which credits are charged for this warehouse configuration
-        meta:
-          dimension:
-            type: number
-            label: Credits Per Second
-          metrics:
-            avg_credits_per_second:
-              type: average
-              label: Average Credits Per Second
+        config:
+          meta:
+            dimension:
+              type: number
+              label: Credits Per Second
+            metrics:
+              avg_credits_per_second:
+                type: average
+                label: Average Credits Per Second
 
   - name: monitoring_warehouses_type2_dimension
     description: Type 2 dimension table for warehouse snapshots with valid_from and valid_to timestamps. Source from dbt_snowflake_monitoring package.
-    meta:
-      group_label: Monitoring
+    config:
+      meta:
+        group_label: Monitoring
     columns:
       - name: warehouse_id
         description: The unique warehouse ID (assigned by Snowflake) that corresponds to the warehouse name in your account.
-        meta:
-          dimension:
-            type: string
-            label: Warehouse ID
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Warehouse ID
       - name: warehouse_name
         description: The name of the warehouse during the given period.
-        meta:
-          dimension:
-            type: string
-            label: Warehouse Name
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Warehouse Name
       - name: warehouse_size
         description: The size of the warehouse during the given period
-        meta:
-          dimension:
-            type: string
-            label: Warehouse Size
+        config:
+          meta:
+            dimension:
+              type: string
+              label: Warehouse Size
       - name: valid_from
         description: Timestamp for the beginning of the period.
-        meta:
-          dimension:
-            type: timestamp
-            label: Valid From
-            time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
+        config:
+          meta:
+            dimension:
+              type: timestamp
+              label: Valid From
+              time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
       - name: valid_to
         description: Timestamp for the end of the period.
-        meta:
-          dimension:
-            type: timestamp
-            label: Valid To
-            time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
+        config:
+          meta:
+            dimension:
+              type: timestamp
+              label: Valid To
+              time_intervals: ["raw", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH"]
       - name: is_current
         description: Boolean indicator to filter to the most recent state of the warehouse
-        meta:
-          dimension:
-            type: boolean
-            label: Is Current
+        config:
+          meta:
+            dimension:
+              type: boolean
+              label: Is Current
