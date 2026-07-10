@@ -8,12 +8,14 @@ DBT_PROJECT_DIR = Path(__file__).resolve().parent.parent / "jaffle_shop"
 
 @flow(name="dbt-build")
 def dbt_build_flow(target: str = "dev"):
-    PrefectDbtRunner(
+    runner = PrefectDbtRunner(
         settings=PrefectDbtSettings(
             project_dir=DBT_PROJECT_DIR,
             profiles_dir=DBT_PROJECT_DIR,
         )
-    ).invoke(["build", "--target", target])
+    )
+    runner.invoke(["deps"])
+    runner.invoke(["build", "--target", target])
 
 
 if __name__ == "__main__":
