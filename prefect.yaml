@@ -18,4 +18,4 @@ deployments:
           - dbt-snowflake
           - prefect-dbt
         env:
-          SNOWFLAKE_PRIVATE_KEY: "{{ prefect.blocks.secret.snowflake-private-key }}"
+          SNOWFLAKE_PRIVATE_KEY_B64: "{{ prefect.blocks.secret.snowflake-private-key }}"
