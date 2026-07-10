@@ -44,6 +44,40 @@ dbt build --select state:modified+ --state ./state --defer
 
 一般的にはS3などのクラウドストレージが定石だが、このプロジェクトはAWS/GCPのアカウントを持たずSnowflakeに閉じているため、**Snowflake内部ステージ**が最小の追加インフラで実現できる現実的な選択肢として挙がった。まだ最終決定はしていない。
 
+#### Snowflake内部ステージ案の実装イメージ
+
+採用する場合、変更点は大きく3つ。
+
+1. **Snowflake側のセットアップ(一回限り)**: ステージを1つ作成する
+
+   ```sql
+   CREATE STAGE IF NOT EXISTS dbt_artifacts_stage;
+   ```
+
+2. **本番flowにアップロードタスクを追加**: `dbt build`成功後、`snowflake-connector-python`で直接接続して`manifest.json`を`PUT`する。`prod`ターゲットでビルドが成功した時だけ実行し、常に固定パス(例: `latest/manifest.json`)に上書きしていく(バージョン管理はせず「最新の正しい状態」だけを持つ)
+
+   ```python
+   import snowflake.connector
+
+   @task
+   def upload_manifest_to_stage():
+       conn = snowflake.connector.connect(...)  # 既存の秘密鍵で接続
+       cur = conn.cursor()
+       cur.execute(
+           f"PUT file://{DBT_PROJECT_DIR}/target/manifest.json "
+           "@dbt_artifacts_stage/latest OVERWRITE=TRUE AUTO_COMPRESS=FALSE"
+       )
+       conn.close()
+   ```
+
+3. **CI(GitHub Actions)にダウンロードステップを追加**: `dbt build`実行前に、同じステージから`GET`で取得する(読み取り専用のCI用Snowflake認証情報が別途必要)
+
+   ```bash
+   snowsql -q "GET @dbt_artifacts_stage/latest/manifest.json file://./state/"
+   ```
+
+まとめると「本番flowに1タスク追加」+「Snowflakeに1ステージ作成」+「CIワークフローに1ステップ追加」の3点セット。
+
 ### 3. 本番flowのスコープ拡大(取り込み → dbt)
 
 今後、本番で動かすflowにはdbtのモデル実行だけでなく、データ取り込み処理も含める想定。「取り込みタスク → `dbt build`」という順序のflowにし、今の`flows/dbt_build_flow.py`に取り込みタスクを追加する形で自然に拡張できる。
