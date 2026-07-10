@@ -44,9 +44,25 @@ dbt build --select state:modified+ --state ./state --defer
 
 一般的にはS3などのクラウドストレージが定石だが、このプロジェクトはAWS/GCPのアカウントを持たずSnowflakeに閉じているため、**Snowflake内部ステージ**が最小の追加インフラで実現できる現実的な選択肢として挙がった。まだ最終決定はしていない。
 
+### 3. 本番flowのスコープ拡大(取り込み → dbt)
+
+今後、本番で動かすflowにはdbtのモデル実行だけでなく、データ取り込み処理も含める想定。「取り込みタスク → `dbt build`」という順序のflowにし、今の`flows/dbt_build_flow.py`に取り込みタスクを追加する形で自然に拡張できる。
+
+CI(Slim CI)側は取り込みは行わず、既存データに対してdbtの変更モデルだけを検証するため、本番flowとは別物として扱う。
+
+### 4. CIはPrefectを経由しない
+
+本番flow(取り込み→dbt)と、CI用の「変更モデルだけdbt実行」は、トリガー(スケジュール/手動 vs PR)・対象環境(PROD vs CI用スクラッチDB)・スコープ(取り込み込み vs dbtのみ)が異なるため、無理に1つのflowにまとめず別物として扱う方針とした。
+
+さらに、CI自体もPrefectのデプロイメントとして用意するのではなく、**Prefectを経由せずGitHub Actions単体で完結させる**方針とした。
+
+- CIは「PRごとに1回、短命に、GitHubのPRチェックとして結果を返す」用途であり、Prefectのスケジューリング・観測性(per-nodeタスク可視化など)は不要
+- `prefect_dbt`(`PrefectDbtRunner`)も使わず、素の`dbt-core`+`dbt-snowflake`をGitHub Actionsのランナーに直接インストールしてCLIで実行する
+- イメージ: GitHub Actionsのワークフロー内で「①stateとなる`manifest.json`を取得 → ② `uv run dbt build --select state:modified+ --defer --state ./state` を実行」という2ステップだけの薄いワークフローになる
+
 ## 未解決事項(実装時に詰める)
 
 - `prod`データベース作成に伴うSnowflake側の設定(ロール・warehouse・スキーマ設計)
-- CIの実行トリガー(GitHub Actions上でPRごとに実行するか、Prefectの別デプロイメントとして実行するか)
+- 本番flowに追加する取り込みタスクの実装(取り込み元・処理内容は別途検討)
 - `manifest.json`永続化先の最終決定(S3 / Snowflakeステージ / その他)
 - CI用Snowflake認証情報の管理方法(このプロジェクトでは秘密鍵をPrefect SecretやGitHub Secretsとして安全に扱う運用が既に確立済み。[docs/prefect-cloud-deployment.md](./prefect-cloud-deployment.md)を参照)
