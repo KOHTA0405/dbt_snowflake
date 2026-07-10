@@ -1,0 +1,21 @@
+name: dbt_snowflake
+
+pull:
+  - prefect.deployments.steps.git_clone:
+      repository: https://github.com/KOHTA0405/dbt_snowflake.git
+      branch: main
+
+deployments:
+  - name: dbt-build
+    entrypoint: flows/dbt_build_flow.py:dbt_build_flow
+    parameters:
+      target: cloud
+    work_pool:
+      name: default-work-pool
+      job_variables:
+        image: prefecthq/prefect-client:3-python3.12
+        pip_packages:
+          - dbt-snowflake
+          - prefect-dbt
+        env:
+          SNOWFLAKE_PRIVATE_KEY: "{{ prefect.blocks.secret.snowflake-private-key }}"
