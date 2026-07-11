@@ -39,8 +39,8 @@ flowchart TB
 
     A4 -->|PUT| S3
     S3 -->|GET| B2
-    A3 -.->|CREATE/INSERT| SF
-    B4 -.->|参照(read-only)| SF
+    A3 -.->|"CREATE/INSERT"| SF
+    B4 -.->|"参照(read-only)"| SF
 ```
 
 dbt自体はSnowflake上のjaffle_shopデータセットをDEV/PRDの2データベースに分けてビルドしており、本番用のPrefect flowはPRDに対して実行、ローカル開発はDEVに対して実行します。
