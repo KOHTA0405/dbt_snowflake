@@ -16,18 +16,31 @@ published: false
 
 ## 全体構成
 
-```
-[本番Prefect flow]                          [CI(GitHub Actions)]
-Prefect Cloud managed実行                     PRごとに起動
-  └─ PrefectDbtOrchestrator(PER_NODE)           └─ dbt-core単体(Prefectを経由しない)
-       ├─ 各モデルをPrefect Taskとして実行            └─ dbt build --select state:modified+
-       ├─ 成功ノードをS3にキャッシュ                       --defer --state ./state
-       └─ 成功後にmanifest.jsonをS3にPUT
-                    │                                    │
-                    └──────────── S3 ───────────────────┘
-                    kohta-dbt-snowflake-artifacts
-                      prod/manifest/manifest.json  ← CIが読む「本番の正しい状態」
-                      prod/cache/...                ← ノードキャッシュ
+```mermaid
+flowchart TB
+    subgraph prefect["本番Prefect flow"]
+        A1["Prefect Cloud managed実行"]
+        A2["PrefectDbtOrchestrator (PER_NODE)<br/>各モデルをPrefect Taskとして実行"]
+        A3["Snowflake (PRD) へbuild"]
+        A4["build成功後:<br/>manifest.json PUT / ノードキャッシュ R/W"]
+        A1 --> A2 --> A3 --> A4
+    end
+
+    subgraph ci["CI (GitHub Actions)"]
+        B1["PRごとに起動 (pull_request)"]
+        B2["manifest.jsonをS3からダウンロード"]
+        B3["dbt-core単体(Prefectを経由しない)<br/>dbt build --select state:modified+<br/>--defer --state ./state"]
+        B4["Snowflake (PRD) を参照<br/>(--defer, read-only)"]
+        B1 --> B2 --> B3 --> B4
+    end
+
+    S3[("S3: xxx-dbt-snowflake-artifacts<br/>prod/manifest/manifest.json<br/>prod/cache/...")]
+    SF[("Snowflake PRD database")]
+
+    A4 -->|PUT| S3
+    S3 -->|GET| B2
+    A3 -.->|CREATE/INSERT| SF
+    B4 -.->|参照(read-only)| SF
 ```
 
 dbt自体はSnowflake上のjaffle_shopデータセットをDEV/PRDの2データベースに分けてビルドしており、本番用のPrefect flowはPRDに対して実行、ローカル開発はDEVに対して実行します。
