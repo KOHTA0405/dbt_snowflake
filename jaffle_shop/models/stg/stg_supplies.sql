@@ -2,7 +2,7 @@ with
 
 source as (
 
-    select * from {{ source('jaffle_shop', 'raw_supplies') }}
+    select * from {{ ref('raw_supplies') }}
 
 ),
 
