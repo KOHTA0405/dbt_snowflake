@@ -25,5 +25,5 @@ deployments:
           - prefect-dbt==0.7.25
           - prefect-aws==0.7.9
         env:
-          SNOWFLAKE_PRIVATE_KEY_DEV_B64: "{{ prefect.blocks.secret.snowflake-private-key }}"
+          SNOWFLAKE_PRIVATE_KEY_DEV_B64: "{{ prefect.blocks.secret.snowflake-private-key-dev }}"
           SNOWFLAKE_PRIVATE_KEY_PRD_B64: "{{ prefect.blocks.secret.snowflake-private-key-prd }}"

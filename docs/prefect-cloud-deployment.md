@@ -54,4 +54,4 @@ runner.invoke(["build", "--target", target])
 
 - デプロイ定義: `prefect.yaml`
 - 実行: `uv run prefect deployment run 'dbt-build/dbt-build'`(スケジュールなし、手動実行のみ)
-- secret: `snowflake-private-key`(Secret Block)→ `SNOWFLAKE_PRIVATE_KEY`環境変数として注入
+- secret: `snowflake-private-key-dev` / `snowflake-private-key-prd`(Secret Block)→ それぞれ`SNOWFLAKE_PRIVATE_KEY_DEV_B64` / `SNOWFLAKE_PRIVATE_KEY_PRD_B64`環境変数として注入
