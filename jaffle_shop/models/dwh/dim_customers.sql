@@ -1,3 +1,4 @@
+-- Slim CI verification: harmless comment-only change
 with
 
 customers as (
