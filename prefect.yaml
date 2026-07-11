@@ -14,10 +14,16 @@ deployments:
       name: default-work-pool
       job_variables:
         image: prefecthq/prefect-client:3-python3.12
+        # Pinned to match uv.lock exactly: an unpinned pip install here can
+        # resolve a different dbt-core than local/CI use, producing a
+        # manifest.json that a mismatched dbt-core can't deserialize (hit in
+        # practice: dbt 1.11's ModelLanguage gained 'javascript', which 1.10
+        # doesn't recognize).
         pip_packages:
-          - dbt-snowflake
-          - prefect-dbt
-          - prefect-aws
+          - dbt-snowflake==1.11.6
+          - dbt-core==1.11.12
+          - prefect-dbt==0.7.25
+          - prefect-aws==0.7.9
         env:
           SNOWFLAKE_PRIVATE_KEY_DEV_B64: "{{ prefect.blocks.secret.snowflake-private-key }}"
           SNOWFLAKE_PRIVATE_KEY_PRD_B64: "{{ prefect.blocks.secret.snowflake-private-key-prd }}"
