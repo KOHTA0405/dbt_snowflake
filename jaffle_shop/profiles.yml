@@ -22,4 +22,14 @@ jaffle_shop:
       threads: 1
       type: snowflake
       warehouse: DBT_DEV_WH
+    prd:
+      account: SZEBENZ-OS44603
+      user: DBT_PRD_USER
+      role: ADMINISTRATOR_PRD
+      private_key_path: /Users/kohta/.ssh/snowflake/dbt_prd_user_key
+      database: PRD
+      schema: BRONZE
+      threads: 1
+      type: snowflake
+      warehouse: DBT_PRD_WH
   target: dev

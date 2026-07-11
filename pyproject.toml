@@ -7,5 +7,6 @@ requires-python = ">=3.12"
 dependencies = [
     "dbt-snowflake>=1.10.3",
     "prefect>=3.7.8",
+    "prefect-aws>=0.7.9",
     "prefect-dbt>=0.7.25",
 ]
