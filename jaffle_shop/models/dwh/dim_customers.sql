@@ -18,4 +18,9 @@ final as (
 )
 
 select * from final
+{% if [true, false] | random %}
+-- Intentional ~50% random failure for testing PrefectDbtOrchestrator's
+-- per-node error handling (this table does not exist).
+cross join intentional_test_failure_nonexistent_table
+{% endif %}
 
