@@ -42,7 +42,9 @@ dbt build --select state:modified+ --state ./state --defer
 | Snowflake内部ステージ | 既存のSnowflake接続情報でそのまま`PUT`/`GET`可能。新規クラウドアカウント不要 | このプロジェクト特有の代替案(一般的な定石ではない) |
 | GitHubの専用ブランチにコミット | 追加インフラ不要、既存のGitHub連携だけで完結 | バイナリ的なファイルをgit管理する形になり、履歴が汚れる |
 
-一般的にはS3などのクラウドストレージが定石だが、このプロジェクトはAWS/GCPのアカウントを持たずSnowflakeに閉じているため、**Snowflake内部ステージ**が最小の追加インフラで実現できる現実的な選択肢として挙がった。まだ最終決定はしていない。
+一般的にはS3などのクラウドストレージが定石だが、このプロジェクトはAWS/GCPのアカウントを持たずSnowflakeに閉じているため、**Snowflake内部ステージ**が最小の追加インフラで実現できる現実的な選択肢として挙がった。
+
+その後、[5. ノード単位キャッシュの永続化先](#5-ノード単位キャッシュ選択的リトライの永続化先)の検討を経て、**S3の方が理にかなっている**という結論に傾いている(詳細は当該セクション参照)。まだ最終決定はしていない。
 
 #### Snowflake内部ステージ案の実装イメージ
 
@@ -94,9 +96,21 @@ CI(Slim CI)側は取り込みは行わず、既存データに対してdbtの変
 - `prefect_dbt`(`PrefectDbtRunner`)も使わず、素の`dbt-core`+`dbt-snowflake`をGitHub Actionsのランナーに直接インストールしてCLIで実行する
 - イメージ: GitHub Actionsのワークフロー内で「①stateとなる`manifest.json`を取得 → ② `uv run dbt build --select state:modified+ --defer --state ./state` を実行」という2ステップだけの薄いワークフローになる
 
+### 5. ノード単位キャッシュ(選択的リトライ)の永続化先
+
+`flows/dbt_build_flow.py`は`PrefectDbtOrchestrator`(PER_NODEモード)に切り替え済み。このモードは`cache=CacheConfig(...)`を渡すことで、内容が変わっていないノードの結果をキャッシュしてスキップできる。これを使うと、一部のモデルだけが失敗したときに**同じflowをそのまま再実行するだけで、成功済みノードはスキップされ失敗したノード以降だけが再実行される**(UIからの「特定モデルだけretry」に近い体験になる)。
+
+キャッシュの保存先は`key_storage`(Prefectの`WritableFileSystem`Block)で指定する。ここでもmanifest.jsonと同様「Snowflakeステージを使えないか」を検討したが、以下の理由で不向きと判断した。
+
+- Prefect/prefect-dbtにSnowflakeステージ用の`WritableFileSystem`実装は存在せず、`snowflake-connector-python`の`PUT`/`GET`をラップした独自Blockを自作する必要がある
+- manifest.jsonは「本番buildが成功するたびに1ファイルをPUTするだけ」の低頻度アクセスだったのに対し、ノードキャッシュは「flow実行のたびに、ノードごとに1回ずつ有無をチェックする」高頻度・多数の小さいオブジェクトへのアクセスになる。SnowflakeセッションのオーバーヘッドがS3のような軽量なオブジェクトストレージより大きく、ノード数が増えるほど遅延が積み重なりやすい
+
+**結論**: manifest.jsonの永続化に加えてノードキャッシュの永続化も必要になったことを踏まえると、2つの用途のために別々の仕組み(Snowflakeステージ用の独自Block + 何らかの案)を保守するより、**両方をS3(または同等のオブジェクトストレージ)に一本化する**方が理にかなっている。Prefect標準の`S3Bucket`/`RemoteFileSystem`Blockがそのまま使えるため、独自実装も不要になる。トレードオフはAWSアカウント・認証情報という新しい運用対象が増えることだが、用途が1つから2つに増えたことでそのコストを払う価値が出てきた、というのが現時点の判断。
+
 ## 未解決事項(実装時に詰める)
 
 - `prod`データベース作成に伴うSnowflake側の設定(ロール・warehouse・スキーマ設計)
 - 本番flowに追加する取り込みタスクの実装(取り込み元・処理内容は別途検討)
-- `manifest.json`永続化先の最終決定(S3 / Snowflakeステージ / その他)
+- `manifest.json`・ノードキャッシュの永続化先の最終決定(現時点ではS3が有力候補)
+- ノードキャッシュ(`CacheConfig`)を実際に有効化するかどうか、有効化する場合の`retries`等のパラメータ設計
 - CI用Snowflake認証情報の管理方法(このプロジェクトでは秘密鍵をPrefect SecretやGitHub Secretsとして安全に扱う運用が既に確立済み。[docs/prefect-cloud-deployment.md](./prefect-cloud-deployment.md)を参照)
