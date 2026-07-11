@@ -9,7 +9,7 @@ deployments:
   - name: dbt-build
     entrypoint: flows/dbt_build_flow.py:dbt_build_flow
     parameters:
-      target: cloud_dev
+      target: cloud_prd
     work_pool:
       name: default-work-pool
       job_variables:
@@ -18,4 +18,5 @@ deployments:
           - dbt-snowflake
           - prefect-dbt
         env:
-          SNOWFLAKE_PRIVATE_KEY_B64: "{{ prefect.blocks.secret.snowflake-private-key }}"
+          SNOWFLAKE_PRIVATE_KEY_DEV_B64: "{{ prefect.blocks.secret.snowflake-private-key }}"
+          SNOWFLAKE_PRIVATE_KEY_PRD_B64: "{{ prefect.blocks.secret.snowflake-private-key-prd }}"

@@ -11,9 +11,12 @@ DBT_PROJECT_DIR = Path(__file__).resolve().parent.parent / "jaffle_shop"
 
 @flow(name="dbt-build")
 def dbt_build_flow(target: str = "dev"):
-    # Managed execution's env var injection mangles multiline PEM values,
-    # so the private key is passed base64-encoded and decoded here instead.
-    if key_b64 := os.environ.get("SNOWFLAKE_PRIVATE_KEY_B64"):
+    # Managed execution's env var injection mangles multiline PEM values, so
+    # the private key is passed base64-encoded and decoded here instead. Both
+    # the dev and prd keys are always injected (job_variables are static and
+    # don't vary per parameter), so pick the one matching this run's target.
+    key_env_var = "SNOWFLAKE_PRIVATE_KEY_PRD_B64" if target == "cloud_prd" else "SNOWFLAKE_PRIVATE_KEY_DEV_B64"
+    if key_b64 := os.environ.get(key_env_var):
         os.environ["SNOWFLAKE_PRIVATE_KEY"] = base64.b64decode(key_b64).decode("utf-8")
 
     # PrefectDbtOrchestrator is a beta API (prefect_dbt.core._orchestrator, not
