@@ -42,5 +42,5 @@ jobs:
         env:
           SNOWFLAKE_PRIVATE_KEY_B64: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_B64 }}
         run: |
-          export SNOWFLAKE_PRIVATE_KEY=$(echo "$SNOWFLAKE_PRIVATE_KEY_B64" | base64 --decode)
-          uv run --project .. dbt build --target cloud_dev --select state:modified+ --defer --state ./state
+          export SNOWFLAKE_PRIVATE_KEY_DEV=$(echo "$SNOWFLAKE_PRIVATE_KEY_B64" | base64 --decode)
+          uv run --project .. dbt build --target dev --select state:modified+ --defer --state ./state

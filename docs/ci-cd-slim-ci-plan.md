@@ -109,7 +109,7 @@ CI(Slim CI)側は取り込みは行わず、既存データに対してdbtの変
 
 ### 6. ノードキャッシュの仕様(実装済み)
 
-`flows/dbt_build_flow.py`で`cache=CacheConfig(result_storage=S3Bucket.load("s3-bucket-prd-cache"), expiration=timedelta(hours=12))`として実装済み(`prd`/`cloud_prd`ターゲットのみ有効、devでは無効)。動作を確認して分かった仕様を残す。
+`flows/dbt_build_flow.py`で`cache=CacheConfig(result_storage=S3Bucket.load("s3-bucket-prd-cache"), expiration=timedelta(hours=12))`として実装済み(`prd`ターゲットのみ有効、devでは無効)。動作を確認して分かった仕様を残す。
 
 **キャッシュキーは「コードの中身」だけで決まり、実データの変化は見ていない**
 

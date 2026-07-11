@@ -9,7 +9,6 @@ from prefect_dbt import PrefectDbtSettings
 from prefect_dbt.core._orchestrator import CacheConfig, ExecutionMode, PrefectDbtOrchestrator
 
 DBT_PROJECT_DIR = Path(__file__).resolve().parent.parent / "jaffle_shop"
-PROD_TARGETS = {"prd", "cloud_prd"}
 
 # Short enough to speed up same-day retries after a partial failure, but
 # shorter than the daily schedule so every scheduled run rebuilds fresh
@@ -30,15 +29,16 @@ def dbt_build_flow(target: str = "dev"):
     # the private key is passed base64-encoded and decoded here instead. Both
     # the dev and prd keys are always injected (job_variables are static and
     # don't vary per parameter), so pick the one matching this run's target.
-    key_env_var = "SNOWFLAKE_PRIVATE_KEY_PRD_B64" if target == "cloud_prd" else "SNOWFLAKE_PRIVATE_KEY_DEV_B64"
-    if key_b64 := os.environ.get(key_env_var):
-        os.environ["SNOWFLAKE_PRIVATE_KEY"] = base64.b64decode(key_b64).decode("utf-8")
+    key_b64_env_var = f"SNOWFLAKE_PRIVATE_KEY_{target.upper()}_B64"
+    dest_env_var = f"SNOWFLAKE_PRIVATE_KEY_{target.upper()}"
+    if key_b64 := os.environ.get(key_b64_env_var):
+        os.environ[dest_env_var] = base64.b64decode(key_b64).decode("utf-8")
 
     # Only cache prod builds: caching skips re-running nodes whose code hasn't
     # changed, which would defeat the point of a daily refresh in dev/CI-like
     # contexts, and adds an AWS dependency to the local dev loop for no benefit.
     cache = None
-    if target in PROD_TARGETS:
+    if target == "prd":
         cache = CacheConfig(
             result_storage=S3Bucket.load("s3-bucket-prd-cache"),
             expiration=CACHE_EXPIRATION,
@@ -59,7 +59,7 @@ def dbt_build_flow(target: str = "dev"):
 
     # run_build() raises DbtBuildFailed on any node error, so this only runs
     # after a fully successful build.
-    if target in PROD_TARGETS:
+    if target == "prd":
         upload_manifest_to_s3()
 
 

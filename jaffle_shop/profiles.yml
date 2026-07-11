@@ -1,10 +1,13 @@
 jaffle_shop:
   outputs:
+    # 秘密鍵はローカル・Prefect Cloudのどちらでもenv_var()経由で読み込む(ローカルはdirenv、
+    # Prefect Cloudのマネージド実行はjob_variables経由のSecret blockでSNOWFLAKE_PRIVATE_KEY_DEV/
+    # SNOWFLAKE_PRIVATE_KEY_PRDをセットする)
     dev:
       account: SZEBENZ-OS44603
       user: DBT_DEV_USER
       role: ADMINISTRATOR_DEV # Snowflakeでは引用符なしの識別子は大文字に変換されるため、大文字で指定
-      private_key_path: /Users/kohta/.ssh/snowflake/dbt_dev_user_key
+      private_key: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_DEV') }}"
       database: DEV
       schema: BRONZE
       threads: 1
@@ -14,29 +17,7 @@ jaffle_shop:
       account: SZEBENZ-OS44603
       user: DBT_PRD_USER
       role: ADMINISTRATOR_PRD
-      private_key_path: /Users/kohta/.ssh/snowflake/dbt_prd_user_key
-      database: PRD
-      schema: BRONZE
-      threads: 1
-      type: snowflake
-      warehouse: DBT_PRD_WH
-    # 以下2つはPrefect Cloudのマネージド実行環境用。秘密鍵ファイルにアクセスできないため、
-    # SNOWFLAKE_PRIVATE_KEY環境変数(Prefect Secret block経由)から鍵の中身を読み込む
-    cloud_dev:
-      account: SZEBENZ-OS44603
-      user: DBT_DEV_USER
-      role: ADMINISTRATOR_DEV
-      private_key: "{{ env_var('SNOWFLAKE_PRIVATE_KEY') }}"
-      database: DEV
-      schema: BRONZE
-      threads: 1
-      type: snowflake
-      warehouse: DBT_DEV_WH
-    cloud_prd:
-      account: SZEBENZ-OS44603
-      user: DBT_PRD_USER
-      role: ADMINISTRATOR_PRD
-      private_key: "{{ env_var('SNOWFLAKE_PRIVATE_KEY') }}"
+      private_key: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PRD') }}"
       database: PRD
       schema: BRONZE
       threads: 1

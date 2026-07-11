@@ -9,7 +9,7 @@ deployments:
   - name: dbt-build
     entrypoint: flows/dbt_build_flow.py:dbt_build_flow
     parameters:
-      target: cloud_prd
+      target: prd
     work_pool:
       name: default-work-pool
       job_variables:
