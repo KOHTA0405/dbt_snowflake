@@ -91,16 +91,9 @@ cache = CacheConfig(
 
 ## 3. manifest.jsonをS3に置いてSlim CIを実現する
 
-dbtには`state:modified`という選択子があり、過去の`manifest.json`と現在の状態を比較して、変更されたモデル(とその下流)だけをビルド・テストできます。
+dbtの`state:modified`選択子と`--defer --state`フラグを使って変更モデル(とその下流)だけをビルド・テストする、いわゆる「Slim CI」自体はdbtユーザーにはお馴染みの手法だと思うので、詳細は公式ドキュメントに譲ります([Continuous integration in dbt](https://docs.getdbt.com/docs/deploy/continuous-integration) / [state node selector](https://docs.getdbt.com/reference/node-selection/methods#state))。
 
-```bash
-dbt build --select state:modified+ --defer --state ./state
-```
-
-- `state:modified+`: 定義が変更されたモデルと、その下流ノードだけを選択
-- `--defer --state`: 選択されなかった上流モデルは再ビルドせず、本番のテーブル/ビューをそのまま参照して依存関係を解決
-
-これを機能させるには「本番の正しい状態」としての`manifest.json`をCIから参照できる場所に永続化しておく必要があります。Prefect Cloudのmanaged実行は使い捨てコンテナなので、明示的に永続化しないと実行終了と同時に消えてしまいます。
+これを機能させるには「本番の正しい状態」としての`manifest.json`をCIから参照できる場所に永続化しておく必要があります。Prefect Cloudのmanaged実行は使い捨てコンテナなので、明示的に永続化しないと実行終了と同時に消えてしまいます。ここが今回工夫した部分です。
 
 ### 本番flow側: build成功時にS3へPUT
 
