@@ -1,14 +1,20 @@
 import base64
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from prefect import flow, task
 from prefect_aws import S3Bucket
 from prefect_dbt import PrefectDbtSettings
-from prefect_dbt.core._orchestrator import ExecutionMode, PrefectDbtOrchestrator
+from prefect_dbt.core._orchestrator import CacheConfig, ExecutionMode, PrefectDbtOrchestrator
 
 DBT_PROJECT_DIR = Path(__file__).resolve().parent.parent / "jaffle_shop"
 PROD_TARGETS = {"prd", "cloud_prd"}
+
+# Short enough to speed up same-day retries after a partial failure, but
+# shorter than the daily schedule so every scheduled run rebuilds fresh
+# instead of skipping unchanged models with stale source data.
+CACHE_EXPIRATION = timedelta(hours=12)
 
 
 @task
@@ -28,6 +34,16 @@ def dbt_build_flow(target: str = "dev"):
     if key_b64 := os.environ.get(key_env_var):
         os.environ["SNOWFLAKE_PRIVATE_KEY"] = base64.b64decode(key_b64).decode("utf-8")
 
+    # Only cache prod builds: caching skips re-running nodes whose code hasn't
+    # changed, which would defeat the point of a daily refresh in dev/CI-like
+    # contexts, and adds an AWS dependency to the local dev loop for no benefit.
+    cache = None
+    if target in PROD_TARGETS:
+        cache = CacheConfig(
+            result_storage=S3Bucket.load("s3-bucket-prd-cache"),
+            expiration=CACHE_EXPIRATION,
+        )
+
     # PrefectDbtOrchestrator is a beta API (prefect_dbt.core._orchestrator, not
     # exported from the package's public __init__). PER_NODE mode runs each dbt
     # node as its own Prefect task/process, enabling per-node retries in the future.
@@ -37,6 +53,7 @@ def dbt_build_flow(target: str = "dev"):
             profiles_dir=DBT_PROJECT_DIR,
         ),
         execution_mode=ExecutionMode.PER_NODE,
+        cache=cache,
     )
     orchestrator.run_build(target=target)
 
