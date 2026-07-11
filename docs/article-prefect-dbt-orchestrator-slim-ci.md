@@ -14,6 +14,18 @@ published: false
 2. S3をバックエンドにしたノード単位キャッシュによる、変更の無いモデルの実行スキップ
 3. `manifest.json`をS3に永続化し、CIでは変更モデルだけを実行するSlim CI
 
+### 実行環境
+
+本番flowの実行基盤はPrefect Cloudの無料プラン(managed work pool)です。パッケージバージョンは以下の通り(2026年7月時点)。
+
+| パッケージ | バージョン |
+| --- | --- |
+| dbt-core | 1.11.12 |
+| dbt-snowflake | 1.11.6 |
+| prefect | 3.7.8 |
+| prefect-dbt | 0.7.25 |
+| prefect-aws | 0.7.9 |
+
 ## 全体構成
 
 ```mermaid
