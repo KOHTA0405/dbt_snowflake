@@ -161,6 +161,8 @@ jobs:
 
 CIのAWS認証は長期アクセスキーを使わず、GitHub ActionsのOIDCフェデレーションでIAM Roleを一時的にAssumeする方式にしました。IAM Role側は`prod/manifest/*`のGet専用に権限を絞り込み、書き込み権限は一切持たせていません。
 
+ちなみにdbt Labsからは、このmanifest.jsonの手動管理を丸ごと不要にする`dbt-state`という新機能も出てきています。試してみたところ現状はdbt-core 2.0のアルファ版でしか動かず、まだ本番投入できる段階ではなさそうでしたが、早く安定版で使えるようになってほしいところです🙏
+
 ## ハマったポイント: dbtバージョンのズレでmanifest.jsonが読めなくなった
 
 実装後、実際にPRを作ってSlim CIを検証したところ、`dbt build`が以下のエラーで失敗しました。
