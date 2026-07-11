@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 
 from prefect import flow
-from prefect_dbt import PrefectDbtRunner, PrefectDbtSettings
+from prefect_dbt import PrefectDbtSettings
+from prefect_dbt.core._orchestrator import ExecutionMode, PrefectDbtOrchestrator
 
 DBT_PROJECT_DIR = Path(__file__).resolve().parent.parent / "jaffle_shop"
 
@@ -15,14 +16,17 @@ def dbt_build_flow(target: str = "dev"):
     if key_b64 := os.environ.get("SNOWFLAKE_PRIVATE_KEY_B64"):
         os.environ["SNOWFLAKE_PRIVATE_KEY"] = base64.b64decode(key_b64).decode("utf-8")
 
-    runner = PrefectDbtRunner(
+    # PrefectDbtOrchestrator is a beta API (prefect_dbt.core._orchestrator, not
+    # exported from the package's public __init__). PER_NODE mode runs each dbt
+    # node as its own Prefect task/process, enabling per-node retries in the future.
+    orchestrator = PrefectDbtOrchestrator(
         settings=PrefectDbtSettings(
             project_dir=DBT_PROJECT_DIR,
             profiles_dir=DBT_PROJECT_DIR,
-        )
+        ),
+        execution_mode=ExecutionMode.PER_NODE,
     )
-    runner.invoke(["deps"])
-    runner.invoke(["build", "--target", target])
+    orchestrator.run_build(target=target)
 
 
 if __name__ == "__main__":
