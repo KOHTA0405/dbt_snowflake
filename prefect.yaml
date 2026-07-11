@@ -27,3 +27,9 @@ deployments:
         env:
           SNOWFLAKE_PRIVATE_KEY_DEV_B64: "{{ prefect.blocks.secret.snowflake-private-key-dev }}"
           SNOWFLAKE_PRIVATE_KEY_PRD_B64: "{{ prefect.blocks.secret.snowflake-private-key-prd }}"
+        # AWS workload identity federation: IAM Userの長期アクセスキーの代わりに
+        # STS AssumeRoleWithWebIdentity経由の一時クレデンシャルを実行環境に注入する
+        # (cf. snowflakeリポジトリ docs/prefect-aws-workload-identity.md)
+        federated_identity:
+          aws_role_arn: arn:aws:iam::730335183162:role/dbt-snowflake-artifacts-prefect-prd
+          aws_region_name: ap-northeast-1

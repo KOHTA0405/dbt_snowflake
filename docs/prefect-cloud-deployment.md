@@ -55,3 +55,25 @@ runner.invoke(["build", "--target", target])
 - デプロイ定義: `prefect.yaml`
 - 実行: `uv run prefect deployment run 'dbt-build/dbt-build'`(スケジュールなし、手動実行のみ)
 - secret: `snowflake-private-key-dev` / `snowflake-private-key-prd`(Secret Block)→ それぞれ`SNOWFLAKE_PRIVATE_KEY_DEV_B64` / `SNOWFLAKE_PRIVATE_KEY_PRD_B64`環境変数として注入
+- AWS(S3)認証: prd targetのAWS認証はIAM Userの長期アクセスキーを廃止し、AWS workload identity federation(OIDC)に移行済み。詳細は[docs/aws-auth-oidc-vs-access-key.md](./aws-auth-oidc-vs-access-key.md)(仕組みの解説)と、snowflakeリポジトリの`docs/prefect-aws-workload-identity.md`(Terraform側の実装)を参照
+
+## AWS認証のOIDC移行(実施済み)
+
+prd targetのPrefect flowが使うAWS認証を、IAM Userのアクセスキー(`aws-credentials-prd` Blockに保存)からOIDC経由の一時クレデンシャルに切り替えた。dev targetはローカル実行のみでPrefect managed work poolを使わないため対象外(IAM Userのアクセスキーのまま)。
+
+**変更内容**:
+
+1. `prefect.yaml`の`job_variables`に`federated_identity`を追加。Work Poolのbase job templateに元々`federated_identity`という設定項目(`aws_role_arn` / `aws_region_name` / `duration_seconds`)が用意されており、Prefect Managed work poolの標準機能として存在する。
+
+   ```yaml
+   job_variables:
+     federated_identity:
+       aws_role_arn: arn:aws:iam::730335183162:role/dbt-snowflake-artifacts-prefect-prd
+       aws_region_name: ap-northeast-1
+   ```
+
+2. `aws-credentials-prd` Blockの`aws_access_key_id`/`aws_secret_access_key`を空にして再保存。この2つはpydanticモデル上Optionalで、未設定ならboto3の標準認証チェーン(環境変数優先)にフォールバックする。Prefect Managedが`federated_identity`設定に基づいて`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN`を実行時に注入するため、コード変更は不要だった。
+3. `s3-bucket-prd`/`s3-bucket-prd-cache` Blockは`credentials`フィールドが`aws-credentials-prd`をBlock参照(値のコピーではない)で持っているため、2の変更だけで両方に反映される。
+4. `snowflake`リポジトリのTerraformで、GitHub Actions CI用と同型のOIDCプロバイダ(`https://api.prefect.cloud/oidc-provider`)+ IAM Roleを作成し、動作確認後に旧IAM User(`dbt-snowflake-artifacts-prod`)・アクセスキーを削除。
+
+**動作確認**: `prefect deployment run 'dbt-build/dbt-build' --param target=prd`を旧IAM User削除の前後で1回ずつ実行し、いずれも`Completed`(manifest.jsonのS3アップロード・ノードキャッシュ読み書きを含め正常動作)。
