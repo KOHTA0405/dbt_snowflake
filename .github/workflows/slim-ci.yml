@@ -1,0 +1,46 @@
+name: Slim CI
+
+on:
+  pull_request:
+    paths:
+      - "jaffle_shop/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    working-directory: jaffle_shop
+
+jobs:
+  slim-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::730335183162:role/dbt-snowflake-artifacts-ci
+          aws-region: ap-northeast-1
+
+      - name: Download production manifest.json
+        run: |
+          mkdir -p state
+          aws s3 cp s3://kohta-dbt-snowflake-artifacts/prod/manifest/manifest.json state/manifest.json
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: |
+          uv sync --project ..
+          uv run --project .. dbt deps
+
+      - name: Run Slim CI build (changed models only)
+        env:
+          SNOWFLAKE_PRIVATE_KEY_B64: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_B64 }}
+        run: |
+          export SNOWFLAKE_PRIVATE_KEY=$(echo "$SNOWFLAKE_PRIVATE_KEY_B64" | base64 --decode)
+          uv run --project .. dbt build --target cloud_dev --select state:modified+ --defer --state ./state

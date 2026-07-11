@@ -75,6 +75,9 @@ docs/_build/
 .pybuilder/
 target/
 
+# dbt Slim CI state (downloaded manifest.json for state:modified comparisons)
+jaffle_shop/state/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
