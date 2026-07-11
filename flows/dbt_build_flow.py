@@ -2,11 +2,20 @@ import base64
 import os
 from pathlib import Path
 
-from prefect import flow
+from prefect import flow, task
+from prefect_aws import S3Bucket
 from prefect_dbt import PrefectDbtSettings
 from prefect_dbt.core._orchestrator import ExecutionMode, PrefectDbtOrchestrator
 
 DBT_PROJECT_DIR = Path(__file__).resolve().parent.parent / "jaffle_shop"
+PROD_TARGETS = {"prd", "cloud_prd"}
+
+
+@task
+def upload_manifest_to_s3():
+    manifest_path = DBT_PROJECT_DIR / "target" / "manifest.json"
+    s3_bucket = S3Bucket.load("s3-bucket-prd")
+    s3_bucket.upload_from_path(manifest_path, "manifest/manifest.json")
 
 
 @flow(name="dbt-build")
@@ -30,6 +39,11 @@ def dbt_build_flow(target: str = "dev"):
         execution_mode=ExecutionMode.PER_NODE,
     )
     orchestrator.run_build(target=target)
+
+    # run_build() raises DbtBuildFailed on any node error, so this only runs
+    # after a fully successful build.
+    if target in PROD_TARGETS:
+        upload_manifest_to_s3()
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ deployments:
         pip_packages:
           - dbt-snowflake
           - prefect-dbt
+          - prefect-aws
         env:
           SNOWFLAKE_PRIVATE_KEY_DEV_B64: "{{ prefect.blocks.secret.snowflake-private-key }}"
           SNOWFLAKE_PRIVATE_KEY_PRD_B64: "{{ prefect.blocks.secret.snowflake-private-key-prd }}"
