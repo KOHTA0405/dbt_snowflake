@@ -186,6 +186,10 @@ job_variables:
 
 `uv.lock`側もdbt-core 1.11系にアップグレードして揃え、`pip_packages`にも明示的にバージョンを固定することで解決しました。「manifest.jsonを生成する環境」と「それを読む環境」でdbtのバージョンを厳密に揃えておく必要がある、という教訓です。
 
+:::message
+より根本的には`uv.lock`固定の依存関係をカスタムイメージに焼き込む方法もありますが、今回使っているWork Pool type(実行基盤の種類)である`prefect:managed`はカスタムイメージ非対応で、対応するself-hosted型のWork Poolは無料プランでは使えませんでした。そのため今回は`pip_packages`のバージョン固定で対処しています。
+:::
+
 ## まとめ
 
 - `PrefectDbtOrchestrator`(PER_NODEモード)により、dbtのモデル単位の実行状況がPrefect UIから見えるようになった
