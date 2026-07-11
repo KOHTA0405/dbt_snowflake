@@ -26,13 +26,15 @@ def upload_manifest_to_s3():
 @flow(name="dbt-build")
 def dbt_build_flow(target: str = "dev"):
     # Managed execution's env var injection mangles multiline PEM values, so
-    # the private key is passed base64-encoded and decoded here instead. Both
-    # the dev and prd keys are always injected (job_variables are static and
-    # don't vary per parameter), so pick the one matching this run's target.
-    key_b64_env_var = f"SNOWFLAKE_PRIVATE_KEY_{target.upper()}_B64"
-    dest_env_var = f"SNOWFLAKE_PRIVATE_KEY_{target.upper()}"
-    if key_b64 := os.environ.get(key_b64_env_var):
-        os.environ[dest_env_var] = base64.b64decode(key_b64).decode("utf-8")
+    # the private key is passed base64-encoded and decoded here instead.
+    # Both dev and prd keys are decoded regardless of the requested target:
+    # PrefectDbtOrchestrator's internal manifest-parsing step (triggered when
+    # target/manifest.json doesn't exist yet) doesn't forward --target and
+    # always falls back to profiles.yml's default target (dev), so dev's key
+    # must be available even when running against prd.
+    for env_name in ("DEV", "PRD"):
+        if key_b64 := os.environ.get(f"SNOWFLAKE_PRIVATE_KEY_{env_name}_B64"):
+            os.environ[f"SNOWFLAKE_PRIVATE_KEY_{env_name}"] = base64.b64decode(key_b64).decode("utf-8")
 
     # Only cache prod builds: caching skips re-running nodes whose code hasn't
     # changed, which would defeat the point of a daily refresh in dev/CI-like
