@@ -23,7 +23,26 @@ def upload_manifest_to_s3():
     s3_bucket.upload_from_path(manifest_path, "manifest/manifest.json")
 
 
-@flow(name="dbt-build")
+# Run as a subflow so the per-node dbt tasks are grouped under a single,
+# collapsible node in the parent flow run's graph in the Prefect UI, keeping
+# them visually separate as sibling tasks (e.g. upload_manifest_to_s3) are added.
+@flow(name="dbt-build-run")
+def run_dbt_build(target: str, cache: CacheConfig | None):
+    # PrefectDbtOrchestrator is a beta API (prefect_dbt.core._orchestrator, not
+    # exported from the package's public __init__). PER_NODE mode runs each dbt
+    # node as its own Prefect task/process, enabling per-node retries in the future.
+    orchestrator = PrefectDbtOrchestrator(
+        settings=PrefectDbtSettings(
+            project_dir=DBT_PROJECT_DIR,
+            profiles_dir=DBT_PROJECT_DIR,
+        ),
+        execution_mode=ExecutionMode.PER_NODE,
+        cache=cache,
+    )
+    orchestrator.run_build(target=target)
+
+
+@flow(name="jaffle-shop-pipeline")
 def dbt_build_flow(target: str = "dev"):
     # Managed execution's env var injection mangles multiline PEM values, so
     # the private key is passed base64-encoded and decoded here instead.
@@ -46,18 +65,7 @@ def dbt_build_flow(target: str = "dev"):
             expiration=CACHE_EXPIRATION,
         )
 
-    # PrefectDbtOrchestrator is a beta API (prefect_dbt.core._orchestrator, not
-    # exported from the package's public __init__). PER_NODE mode runs each dbt
-    # node as its own Prefect task/process, enabling per-node retries in the future.
-    orchestrator = PrefectDbtOrchestrator(
-        settings=PrefectDbtSettings(
-            project_dir=DBT_PROJECT_DIR,
-            profiles_dir=DBT_PROJECT_DIR,
-        ),
-        execution_mode=ExecutionMode.PER_NODE,
-        cache=cache,
-    )
-    orchestrator.run_build(target=target)
+    run_dbt_build(target=target, cache=cache)
 
     # run_build() raises DbtBuildFailed on any node error, so this only runs
     # after a fully successful build.

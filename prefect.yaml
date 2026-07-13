@@ -6,7 +6,7 @@ pull:
       branch: main
 
 deployments:
-  - name: dbt-build
+  - name: prd-daily
     entrypoint: flows/dbt_build_flow.py:dbt_build_flow
     parameters:
       target: prd
