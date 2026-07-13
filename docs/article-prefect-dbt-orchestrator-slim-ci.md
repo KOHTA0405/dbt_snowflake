@@ -78,6 +78,37 @@ orchestrator.run_build(target=target)
 
 `PER_NODE`にすることで、Prefect UI上でモデルごとに独立したTask run(成功/失敗/実行時間)が確認できるようになり、後述のノード単位キャッシュも有効化できるようになりました。ベータ版なので、今後のアップデートでAPIが変わる可能性がある点は注意が必要です。
 
+:::message
+**Tips: dbt buildをサブフローに包んでPrefect UIでグルーピングする**
+
+`PER_NODE`モードは各dbtノードを独立したTaskとして展開するため、flowにdbt build以外の処理(通知やmanifestのアップロードなど)が増えてくると、実行グラフ上で大量のdbt node taskと他のtaskが混在して見づらくなります。
+
+対策として、`orchestrator.run_build()`を呼ぶ部分だけ別の`@flow`(サブフロー)に切り出すと、Prefect UIの実行グラフ上では「dbt build」全体が1つの折りたためるノードとしてグルーピングされ、中を展開すると従来通りモデル単位のリネージが見られます。
+
+```python
+@flow(name="dbt-build-run")
+def run_dbt_build(target: str, cache: CacheConfig | None):
+    orchestrator = PrefectDbtOrchestrator(
+        settings=PrefectDbtSettings(
+            project_dir=DBT_PROJECT_DIR,
+            profiles_dir=DBT_PROJECT_DIR,
+        ),
+        execution_mode=ExecutionMode.PER_NODE,
+        cache=cache,
+    )
+    orchestrator.run_build(target=target)
+
+
+@flow(name="jaffle-shop-pipeline")
+def dbt_build_flow(target: str = "dev"):
+    ...
+    run_dbt_build(target=target, cache=cache)
+    ...
+```
+
+なお、大量のtaskをネイティブに(サブフロー化なしで)グループ表示する機能自体はPrefect本体にはまだ無く、[#16081](https://github.com/PrefectHQ/prefect/issues/16081)でmapped task向けの要望としてissueが上がっている段階です。`PrefectDbtOrchestrator`のPER_NODEタスク向けの要望は見当たらなかったので、現状はサブフローで手動グルーピングするのが実用的な回避策です。
+:::
+
 ## 2. S3バックエンドのノード単位キャッシュ
 
 `PrefectDbtOrchestrator`は`cache=CacheConfig(...)`を渡すことで、内容が変わっていないノードの実行をスキップできます。これを使うと、一部のモデルだけ失敗したときに**同じflowをそのまま再実行するだけで、成功済みノードはスキップされ失敗したノード以降だけが再実行される**という、UIからの「特定モデルだけretry」に近い体験が実現できます。
