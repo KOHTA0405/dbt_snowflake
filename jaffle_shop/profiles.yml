@@ -7,7 +7,7 @@ jaffle_shop:
       account: SZEBENZ-OS44603
       user: DBT_DEV_USER
       role: ADMINISTRATOR_DEV # Snowflakeでは引用符なしの識別子は大文字に変換されるため、大文字で指定
-      private_key: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_DEV') }}"
+      private_key: "{{ env_var('SNOWFLAKE_DBT_USER_PRIVATE_KEY_DEV') }}"
       database: DEV
       schema: BRONZE
       threads: 1
@@ -17,10 +17,20 @@ jaffle_shop:
       account: SZEBENZ-OS44603
       user: DBT_PRD_USER
       role: ADMINISTRATOR_PRD
-      private_key: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PRD') }}"
+      private_key: "{{ env_var('SNOWFLAKE_DBT_USER_PRIVATE_KEY_PRD') }}"
       database: PRD
       schema: BRONZE
       threads: 1
       type: snowflake
       warehouse: DBT_PRD_WH
+    lightdash-preview:
+      account: SZEBENZ-OS44603
+      user: LIGHTDASH_DEV_USER
+      role: LIGHTDASH_DEV # Snowflakeでは引用符なしの識別子は大文字に変換されるため、大文字で指定
+      private_key: "{{ env_var('SNOWFLAKE_LIGHTDASH_USER_PRIVATE_KEY_DEV') }}"
+      database: DEV
+      schema: BRONZE
+      threads: 1
+      type: snowflake
+      warehouse: DBT_DEV_WH
   target: dev
