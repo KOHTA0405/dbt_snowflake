@@ -212,3 +212,4 @@ __marimo__/
 jaffle_shop/data/*
 .DS_Store
 **/.DS_Store
+jaffle_shop/.user.yml
