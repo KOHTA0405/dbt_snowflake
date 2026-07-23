@@ -1,14 +1,14 @@
----
-title: "Snowflake + Prefect + dbtでモデル単位の可視化・キャッシュ・Slim CIを組んだ話"
-emoji: "🧊"
-type: "tech"
-topics: ["dbt", "prefect", "snowflake", "aws", "githubactions"]
-published: false
----
-
 ## はじめに
+こんにちは、クラシルのデータチームのKOHです。
 
-個人のSnowflake検証プロジェクト([jaffle_shop](https://github.com/dbt-labs/jaffle-shop)ベース)で、Prefect Cloud経由でdbtを実行するパイプラインを構築しました。本記事では、その中でも特に工夫した3点について書きます。
+先日、[PrefectがDagsterを買収する](https://www.prefect.io/prefect-acquires-dagster)という発表がありました。Dagsterは、アセット指向という他のパイプラインとは特異な性質を持っていると思います。そういった要素が今後Prefect側にも取り込まれたりするんでしょうか...？期待がかかります。
+
+弊社は現在分析基盤内のデータパイプラインを構築しておりますが、一気通貫で取り込み処理から加工処理までを行うためのオーケストレーションツールは導入しておりません。
+そのため、途中エラーの際には、順番を考えて再実行するなど、非常に苦労を強いられています。
+
+そこで、オーケストレーションツールの候補の1つとして、PrefectをPoCレベルで検証してみました。
+触ってみると意外と、dbtとの連携や、フローのリトライの時の動きなど学びがあったので、今後のためにもメモとして残しておこうと思います。
+
 
 1. `PrefectDbtOrchestrator`によるモデル単位の実行状況の可視化
 2. S3をバックエンドにしたノード単位キャッシュによる、変更の無いモデルの実行スキップ
@@ -18,13 +18,13 @@ published: false
 
 本番flowの実行基盤はPrefect Cloudの無料プラン(managed work pool)です。パッケージバージョンは以下の通り(2026年7月時点)。
 
-| パッケージ    | バージョン |
-| ------------- | ---------- |
-| dbt-core      | 1.11.12    |
-| dbt-snowflake | 1.11.6     |
-| prefect       | 3.7.8      |
-| prefect-dbt   | 0.7.25     |
-| prefect-aws   | 0.7.9      |
+| パッケージ | バージョン |
+| --- | --- |
+| dbt-core | 1.11.12 |
+| dbt-snowflake | 1.11.6 |
+| prefect | 3.7.8 |
+| prefect-dbt | 0.7.25 |
+| prefect-aws | 0.7.9 |
 
 ## 全体構成
 
@@ -55,13 +55,17 @@ flowchart TB
     B4 -.->|"参照(read-only)"| SF
 ```
 
-dbt自体はSnowflake上のjaffle_shopデータセットをDEV/PRDの2データベースに分けてビルドしており、本番用のPrefect flowはPRDに対して実行、ローカル開発はDEVに対して実行します。
+PoCで使用しているflowについては、後述するPrefectDbtOrchestratorを使って、dbt buildを実行するのみです。
+勿論、本番で使用していこうとするなら、dbt buildの前に、データの抽出処理なども入ってくる想定です。
 
 ## 1. PrefectDbtOrchestratorでモデル単位の可視化
 
-最初は`prefect-dbt`パッケージの`PrefectDbtRunner`を使っていました。これはdbt-coreの`dbtRunner`をそのまま1プロセスで呼び出す薄いラッパーで、dbt内部のイベントストリームにフックしてPrefectのTaskを作るため、UIから今どのモデルが動いているかは見えます。しかし実行のスケジューリング自体はdbtに委ねたままで、Prefect側からの制御(モデル単位のリトライなど)はできませんでした。
+最初は`prefect-dbt`パッケージの`PrefectDbtRunner`を使っていました。これはdbt-coreの`dbtRunner`をそのまま1プロセスで呼び出す薄いラッパーです。モデルの実行順も、dbt側がコントロールします。
+しかし、調べてみると、モデル単位のリトライができなかったりと、実際に使うとなると、制約がいくつか出てきそうな印象でした。
 
-そこで、同パッケージの`PrefectDbtOrchestrator`(2026年7月現在ベータ版の`prefect_dbt.core._orchestrator`)に切り替えました。こちらは`manifest.json`を自前でパースしてノードの実行順序(wave)を計算し、`PER_NODE`モードでは各ノードを本当に独立したPrefect Task/プロセスとして実行します。
+そこで、同パッケージの`PrefectDbtOrchestrator`(2026年7月現在ベータ版の`prefect_dbt.core._orchestrator`)を試してみることにしました。
+こちらは`manifest.json`を自前でパースしてノードの実行順序(wave)をPrefect側が制御します。
+
 
 ```python
 from prefect_dbt.core._orchestrator import ExecutionMode, PrefectDbtOrchestrator
@@ -76,12 +80,16 @@ orchestrator = PrefectDbtOrchestrator(
 orchestrator.run_build(target=target)
 ```
 
+![](https://static.zenn.studio/user-upload/22d014e59cd1-20260715.png)
+
 `PER_NODE`にすることで、Prefect UI上でモデルごとに独立したTask run(成功/失敗/実行時間)が確認できるようになり、後述のノード単位キャッシュも有効化できるようになりました。ベータ版なので、今後のアップデートでAPIが変わる可能性がある点は注意が必要です。
+
+参考：[Comparison with PrefectDbtRunner](https://docs.prefect.io/integrations/prefect-dbt/orchestrator#comparison-with-prefectdbtrunner)
 
 :::message
 **Tips: dbt buildをサブフローに包んでPrefect UIでグルーピングする**
 
-`PER_NODE`モードは各dbtノードを独立したTaskとして展開するため、flowにdbt build以外の処理(通知やmanifestのアップロードなど)が増えてくると、実行グラフ上で大量のdbt node taskと他のtaskが混在して見づらくなります。
+`PER_NODE`モードは各dbtノードを独立したTaskとして展開するため、flowにdbt build以外のタスク(ソースからのデータの抽出、エラー通知処理、他)が増えてくると、実行グラフ上で大量のdbt node taskと他のtaskが混在して見づらくなります。
 
 対策として、`orchestrator.run_build()`を呼ぶ部分だけ別の`@flow`(サブフロー)に切り出すと、Prefect UIの実行グラフ上では「dbt build」全体が1つの折りたためるノードとしてグルーピングされ、中を展開すると従来通りモデル単位のリネージが見られます。
 
@@ -106,7 +114,7 @@ def dbt_build_flow(target: str = "dev"):
     ...
 ```
 
-なお、大量のtaskをネイティブに(サブフロー化なしで)グループ表示する機能自体はPrefect本体にはまだ無く、[#16081](https://github.com/PrefectHQ/prefect/issues/16081)でmapped task向けの要望としてissueが上がっている段階です。`PrefectDbtOrchestrator`のPER_NODEタスク向けの要望は見当たらなかったので、現状はサブフローで手動グルーピングするのが実用的な回避策です。
+※大量のtaskをネイティブに(サブフロー化なしで)グループ表示する機能自体はPrefect本体には現時点では無いようです。
 :::
 
 ## 2. S3バックエンドのノード単位キャッシュ
@@ -124,20 +132,7 @@ cache = CacheConfig(
 )
 ```
 
-### なぜS3か
 
-キャッシュの保存先としてSnowflakeの内部ステージも検討しましたが、ノードキャッシュは「flow実行のたびにノードごとに1回ずつ有無をチェックする」高頻度・多数の小さいオブジェクトへのアクセスになります。最終的にS3に一本化した理由は次の3点です。
-
-**1. セッション確立のレイテンシ**
-Snowflakeへの接続はTLSハンドシェイクと認証のラウンドトリップを伴い、ウェアハウスがサスペンド中であればオートリジュームも発生します。オートリジューム直後はキャッシュが温まっておらずクエリが遅くなることは[公式docs](https://docs.snowflake.com/en/user-guide/interactive)にも明記されていますが、具体的な秒数のSLAは示されていません。それでも、コネクションプーリングだけで済むS3の軽量なHTTP GET/HEADに比べれば、無視できない遅延が乗ると考えるのが妥当です。
-
-**2.「存在確認」のためのAPIが重い**
-S3のHeadObjectに相当する軽量な存在確認APIが内部ステージには無く、`LIST @stage/path`のようなSQL文を実行することになります。認証・メタデータ管理・クエリコンパイルは[クラウドサービスレイヤー](https://docs.snowflake.com/en/user-guide/intro-key-concepts)が担う領域なので、LISTがウェアハウスを必要としない可能性はありますが、これはアーキテクチャからの類推であり、公式docsで明言されているわけではありません。少なくとも、単純なキー存在チェックにしてはリクエスト1回あたりのパスが長いことは確かです。
-
-**3. アクセスパターンとの相性**
-`PER_NODE`モードでは、flow実行のたびにノードごとに1回ずつキャッシュの有無をチェックします。dbtモデルが数十〜百単位になると、これは高頻度・多数の小さなリクエストの束になります。ここでの選択肢は実質2つです。ノードごとに毎回新規セッションを張れば1のオーバーヘッドがノード数分積み重なりますし、逆に1つのセッション/ウェアハウスをflow全体で使い回すとすればチェックのためだけにウェアハウスを稼働させ続けることになり、コスト最適化の観点で本末転倒です。
-
-S3ならコネクションプーリングだけで軽く捌け、ウェアハウス課金とも無関係です。加えてPrefect側に`S3Bucket` Blockがすでに用意されており、`CacheConfig`の`result_storage`にそのまま渡せる点も実装コストの面で後押しになりました。
 
 ### キャッシュキーは「コードの中身」だけで決まる
 
@@ -150,15 +145,16 @@ S3ならコネクションプーリングだけで軽く捌け、ウェアハウ
 - 依存マクロファイルの中身
 - 出力先のテーブル/ビュー名
 
-つまり**`source()`で参照する外部テーブルの行データが変わったかどうかは一切見ていません**。本番flowを日次スケジュール実行する予定だったため、これは重要な落とし穴でした。モデルのコードが変わっていなければ、元データが更新されていてもキャッシュがヒットしてしまい、テーブルが更新されなくなってしまうのです。
+つまり、**`source()`で参照する外部テーブルの行データが変わったかどうかは一切見ていません**。モデルのコードが変わっていなければ、元データが更新されていてもキャッシュがヒットしてしまい、テーブルが更新されなくなってしまうのです。例えば、日次で実行するようにしていたら、翌日分もキャッシュがヒットしてスキップされてしまいます。
 
-対策として、`expiration`をS3のライフサイクルルール(オブジェクトの自動削除、30日)より短く、日次実行の間隔(24時間)より確実に短い**12時間**に設定しました。これにより「同日中の再実行はキャッシュで高速化されるが、翌日の定期実行では必ずキャッシュが期限切れになりフルで再構築される」という動きを両立させています。
+その対策として、flowに設定する`expiration`をS3のライフサイクルルール(オブジェクトの自動削除、30日)より短く、日次実行の間隔(24時間)より確実に短い**12時間**に設定しました。これにより「同日中の再実行はキャッシュで高速化されるが、翌日の定期実行では必ずキャッシュが期限切れになりフルで再構築される」という動きを両立させています。
 
 またデフォルトでは`test`・`snapshot`・`incremental`モデルはキャッシュ対象外です。特にtestはモデルのSQLが同じでも元データが変われば結果(pass/fail)が変わりうるデータ品質チェックなので、キャッシュでスキップすると壊れたデータに対して古い「pass」を信じてしまうリスクがあり、デフォルトのまま運用しています。
 
 ## 3. manifest.jsonをS3に置いてSlim CIを実現する
 
-dbtの`state:modified`選択子と`--defer --state`フラグを使って変更モデル(とその下流)だけをビルド・テストする、いわゆる「Slim CI」自体はdbtユーザーにはお馴染みの手法だと思うので、詳細は公式ドキュメントに譲ります([Continuous integration in dbt](https://docs.getdbt.com/docs/deploy/continuous-integration) / [state node selector](https://docs.getdbt.com/reference/node-selection/methods#state))。
+dbtの`state:modified`選択子と`--defer --state`フラグを使って変更モデル(とその下流)だけをビルド・テストする、いわゆる「Slim CI」にできるようにしました。
+([Continuous integration in dbt](https://docs.getdbt.com/docs/deploy/continuous-integration) / [state node selector](https://docs.getdbt.com/reference/node-selection/methods#state))。
 
 これを機能させるには、比較基準となる`manifest.json`をCIから参照できる場所に永続化しておく必要があります。Prefect Cloudのmanaged実行は使い捨てコンテナなので、明示的に永続化しないと実行終了と同時に消えてしまいます。ここが今回工夫した部分です。
 
@@ -176,7 +172,7 @@ def upload_manifest_to_s3():
 
 ### CI側: GitHub Actions単体で完結させる
 
-CI用のdeploymentをPrefect側に作ることも考えましたが、CIは「PRごとに1回、短命に、PRチェックとして結果を返す」用途であり、Prefectのスケジューリングや観測性(per-nodeタスク可視化)は不要です。そのため**Prefectを経由せず、dbt-core単体だけで**動かしています。
+dbtモデルの変更にとどまる変更については、CIでdbt-coreで単体で動かすようなものにしてみました。
 
 ```yaml
 name: Slim CI
@@ -198,26 +194,14 @@ jobs:
         working-directory: jaffle_shop
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::<account-id>:role/dbt-snowflake-artifacts-ci
-          aws-region: ap-northeast-1
-
+      ...
+      
       - name: Download production manifest.json
         run: |
           mkdir -p state
           aws s3 cp s3://<bucket>/prod/manifest/manifest.json state/manifest.json
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Install dependencies
-        run: |
-          uv sync --project ..
-          uv run --project .. dbt deps
-
+      ...
       - name: Run Slim CI build (changed models only)
         env:
           SNOWFLAKE_PRIVATE_KEY_B64: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_B64 }}
@@ -226,21 +210,15 @@ jobs:
           uv run --project .. dbt build --target dev --select state:modified+ --defer --state ./state
 ```
 
-CIのAWS認証は長期アクセスキーを使わず、GitHub ActionsのOIDCフェデレーションでIAM Roleを一時的にAssumeする方式にしました。IAM Role側は`prod/manifest/*`のGet専用に権限を絞り込み、書き込み権限は一切持たせていません。
+こちらで、変更したモデルのみを差分で検証できます。
 
-ちなみにdbt Labsからは、このmanifest.jsonの手動管理を丸ごと不要にする`dbt-state`という新機能も出てきています。試してみたところ現状はdbt-core 2.0のアルファ版でしか動かず、まだ本番投入できる段階ではなさそうでしたが、早く安定版で使えるようになってほしいところです🙏
+`dbt-state`を使えばmanifest.jsonなどの管理も不要そうですが、試してみたところ現状はdbt-core 2.0のアルファ版でしか動かず、まだ本番投入できる段階ではなさそうでした。安定版が出てきたら、こちらも検討したいと思います。
 
 ## ハマったポイント: dbtバージョンのズレでmanifest.jsonが読めなくなった
 
 実装後、実際にPRを作ってSlim CIを検証したところ、`dbt build`が以下のエラーで失敗しました。
 
-```
-mashumaro.exceptions.InvalidFieldValue: Field "supported_languages" of type
-Optional[List[ModelLanguage]] in Macro has invalid value ['sql', 'python', 'javascript']
-```
-
-原因は、S3に置かれていた`manifest.json`が`dbt_version: 1.11.12`で生成されていたのに対し、CI側は`uv.lock`で`dbt-core==1.10.15`に固定されていたことでした。dbt-core 1.11で組み込みマクロの`supported_languages`に`'javascript'`が追加されましたが、1.10系の`ModelLanguage`Enumにはまだ存在せず、古いバージョンで新しいmanifestを読もうとして型検証エラーになっていたのです。
-
+原因は、dbtのバージョンズレによるものです。
 なぜバージョンがズレたのかというと、Prefect Cloudのmanaged実行環境(`pip_packages`)でdbt-snowflakeのバージョンを固定していなかったためでした。`pip_packages`はバージョン指定なしだと毎回pipが最新版を解決するため、`uv.lock`で固定しているローカル/CIの環境と静かにズレてしまいます。
 
 ```yaml
@@ -261,7 +239,4 @@ job_variables:
 
 ## まとめ
 
-- `PrefectDbtOrchestrator`(PER_NODEモード)により、dbtのモデル単位の実行状況がPrefect UIから見えるようになった
-- ノード単位キャッシュ(S3バックエンド)により、変更の無いモデルの再実行をスキップできるが、キャッシュキーはコードの中身のみを見ており実データの変化は検知しないため、有効期限の設計が重要
-- `manifest.json`をS3に永続化し、CIはPrefectを経由せずdbt-core単体で`state:modified+`によるSlim CIを実現
-- 生成環境と参照環境でdbtのバージョンを揃えておかないと、`manifest.json`の互換性が壊れる
+今回はあくまでもPoC的にオーケストレーションの導入候補としてPrefectを検証してみました。今後Prefectあるいは別のツールの導入をしてみて、気づいた点があったら再度まとめてみたいと思います！
