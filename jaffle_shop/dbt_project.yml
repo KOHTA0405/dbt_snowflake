@@ -32,13 +32,13 @@ clean-targets: # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   jaffle_shop:
-    stg:
+    staging:
       +materialized: view
-      +schema: BRONZE
-    dwh:
+      +schema: SILVER
+    intermediate:
       +materialized: table
       +schema: SILVER
-    gold:
+    mart:
       +materialized: view
       +schema: GOLD
   dbt_snowflake_monitoring:

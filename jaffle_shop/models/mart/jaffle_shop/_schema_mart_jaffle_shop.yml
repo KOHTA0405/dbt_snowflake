@@ -1,41 +1,11 @@
 version: 2
 
 models:
-  - name: int_product_supply_costs
-    description: >
-      Intermediate model that calculates the total supply cost per product using the latest supply costs.
-      This aggregates all supply items needed to produce each product.
-    config:
-      meta:
-        group_label: DWH Jaffle Shop
-    columns:
-      - name: product_id
-        description: The unique key for each product.
-        config:
-          meta:
-            dimension:
-              type: string
-              label: Product ID
-      - name: total_supply_cost
-        description: The total cost of all supplies needed to produce one unit of this product, using the latest supply costs.
-        config:
-          meta:
-            dimension:
-              type: number
-              label: Total Supply Cost
-            metrics:
-              total_supply_cost_sum:
-                type: sum
-                label: Total Supply Cost (Sum)
-              avg_supply_cost:
-                type: average
-                label: Average Supply Cost
-
   - name: dim_customers
     description: Customer dimension table, one row per customer.
     config:
       meta:
-        group_label: DWH Jaffle Shop
+        group_label: Jaffle Shop
     columns:
       - name: customer_sk
         description: Surrogate key for customer dimension.
@@ -66,7 +36,7 @@ models:
     description: Location dimension table, one row per location/store.
     config:
       meta:
-        group_label: DWH Jaffle Shop
+        group_label: Jaffle Shop
     columns:
       - name: location_sk
         description: Surrogate key for location dimension.
@@ -116,7 +86,7 @@ models:
     description: Product dimension table with supply cost and profit metrics, one row per product.
     config:
       meta:
-        group_label: DWH Jaffle Shop
+        group_label: Jaffle Shop
     columns:
       - name: product_sk
         description: Surrogate key for product dimension.
@@ -230,7 +200,7 @@ models:
       One row per order item.
     config:
       meta:
-        group_label: DWH Jaffle Shop
+        group_label: Jaffle Shop
         primary_key: order_item_id
         joins:
           - join: dim_customers
@@ -436,7 +406,7 @@ models:
       One row per order.
     config:
       meta:
-        group_label: DWH Jaffle Shop
+        group_label: Jaffle Shop
         primary_key: order_id
         joins:
           - join: dim_customers
