@@ -1,14 +1,14 @@
 packages:
-  - name: dbt_utils
-    package: dbt-labs/dbt_utils
-    version: 1.3.2
-  - name: dbt_snowflake_monitoring
-    package: get-select/dbt_snowflake_monitoring
-    version: 5.5.0
-  - name: dbt_semantic_view
-    package: Snowflake-Labs/dbt_semantic_view
-    version: 1.0.3
-  - name: dbt_snowflake_query_tags
-    package: get-select/dbt_snowflake_query_tags
-    version: 2.6.0
-sha1_hash: f794c3d478c3b53087afb33ebc6e1db11d37dfb9
+- package: get-select/dbt_query_tags
+  name: dbt_query_tags
+  version: 3.2.0
+- package: Snowflake-Labs/dbt_semantic_view
+  name: dbt_semantic_view
+  version: 1.0.6
+- package: get-select/dbt_snowflake_monitoring
+  name: dbt_snowflake_monitoring
+  version: 5.6.1
+- package: dbt-labs/dbt_utils
+  name: dbt_utils
+  version: 1.4.1
+sha1_hash: 8d1bcaf14210ee29c926286959a4bdee476c6480
