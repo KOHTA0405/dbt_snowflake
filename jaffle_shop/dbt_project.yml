@@ -9,6 +9,7 @@ profile: "jaffle_shop"
 
 flags:
   enable_iceberg_materializations: true
+  snowflake_managed_iceberg_default: true
 
 # These configurations specify where dbt should look for different types of files.
 # The `model-paths` config, for example, states that models in this project can be
