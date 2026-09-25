@@ -20,8 +20,8 @@ deployments:
         # practice: dbt 1.11's ModelLanguage gained 'javascript', which 1.10
         # doesn't recognize).
         pip_packages:
-          - dbt-snowflake==1.11.6
-          - dbt-core==1.11.12
+          - dbt-snowflake==1.12.1
+          - dbt-core==1.12.5
           - prefect-dbt==0.7.25
           - prefect-aws==0.7.9
         env:
